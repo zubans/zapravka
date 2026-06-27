@@ -1,0 +1,21 @@
+# Backend cache
+zapravka_cache.db
+*.db
+
+# Logs
+*.log
+
+# Build artifacts
+backend/zapravka
+backend/zapravka-*
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# OS
+.DS_Store
+
+# PID files
+*.pid

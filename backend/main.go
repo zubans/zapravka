@@ -306,6 +306,28 @@ func parseOSM(osm OSMResponse) []Station {
 	return stations
 }
 
+func (a *App) handleCacheInfo(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	if r.Method == http.MethodOptions {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	count, err := a.cache.Count()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"cache_path": getCacheDBPath(),
+		"total":      count,
+	})
+}
+
 func (a *App) handleVote(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w)
 	if r.Method == http.MethodOptions {
@@ -365,7 +387,7 @@ func main() {
 	)
 	flag.Parse()
 
-	cache, err := NewStationCache(cacheDBPath)
+	cache, err := NewStationCache(getCacheDBPath())
 	if err != nil {
 		log.Fatalf("failed to open station cache: %v", err)
 	}
@@ -405,6 +427,10 @@ func main() {
 
 	http.HandleFunc("/api/stations", app.handleStations)
 	http.HandleFunc("/api/vote", app.handleVote)
+	http.HandleFunc("/api/cache/info", app.handleCacheInfo)
+
+	count, _ := cache.Count()
+	log.Printf("Station cache path: %s, total stations: %d", getCacheDBPath(), count)
 
 	host := os.Getenv("HOST")
 	if host == "" {

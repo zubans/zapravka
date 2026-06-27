@@ -220,6 +220,7 @@ After=network.target
 Type=forking
 WorkingDirectory=$ROOT
 Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="CACHE_DB_PATH=$ROOT/zapravka_cache.db"
 ExecStart=$ROOT/start.sh
 ExecStop=$ROOT/stop.sh
 Restart=on-failure

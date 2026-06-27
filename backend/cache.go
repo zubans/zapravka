@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"sync"
 	"time"
 
@@ -12,9 +13,16 @@ import (
 )
 
 const (
-	cacheTTL   = 30 * 24 * time.Hour // 1 месяц
-	cacheDBPath = "./zapravka_cache.db"
+	cacheTTL    = 30 * 24 * time.Hour // 1 месяц
+	defaultDBPath = "./zapravka_cache.db"
 )
+
+func getCacheDBPath() string {
+	if p := os.Getenv("CACHE_DB_PATH"); p != "" {
+		return p
+	}
+	return defaultDBPath
+}
 
 type StationCache struct {
 	mu sync.RWMutex
