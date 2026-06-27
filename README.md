@@ -24,17 +24,28 @@ zapravka/
 │       ├── App.vue
 │       └── components/
 │           └── MapView.vue
-├── start.sh
-├── stop.sh
+├── install.sh    # установка с нуля
+├── start.sh      # запуск
+├── stop.sh       # остановка
 └── README.md
 ```
 
-## Запуск
-
-В корне проекта есть удобные скрипты:
+## Быстрая установка на чистый сервер
 
 ```bash
-./start.sh   # запускает backend и frontend в фоне
+./install.sh  # проверяет и устанавливает Go, Node.js, npm, git, зависимости проекта
+./start.sh    # запускает backend и frontend
+```
+
+Поддерживаются:
+- Ubuntu/Debian (apt)
+- RHEL/CentOS (yum)
+- macOS (Homebrew)
+
+## Запуск
+
+```bash
+./start.sh   # запускает backend и frontend в фоне, проверяет зависимости
 ./stop.sh    # останавливает их
 ```
 
