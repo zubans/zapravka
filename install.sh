@@ -65,30 +65,22 @@ go_arch() {
 }
 
 install_base_deps() {
-  log "Checking base dependencies (curl, git, build tools)..."
+  log "Checking base dependencies (curl, git, nginx, build tools)..."
   case "$OS" in
     debian)
       apt-get update
-      local pkgs="ca-certificates"
+      local pkgs="ca-certificates nginx"
       check_command curl || pkgs="$pkgs curl"
       check_command git  || pkgs="$pkgs git"
       check_command gcc  || pkgs="$pkgs build-essential"
-      if [[ -n "$pkgs" ]]; then
-        apt-get install -y $pkgs
-      else
-        log "Base dependencies already present"
-      fi
+      apt-get install -y $pkgs
       ;;
     rhel)
-      local pkgs="ca-certificates"
+      local pkgs="ca-certificates nginx"
       check_command curl || pkgs="$pkgs curl"
       check_command git  || pkgs="$pkgs git"
       check_command gcc  || pkgs="$pkgs gcc gcc-c++ make"
-      if [[ -n "$pkgs" ]]; then
-        yum install -y $pkgs
-      else
-        log "Base dependencies already present"
-      fi
+      yum install -y $pkgs
       ;;
     macos)
       if ! check_command brew; then
@@ -98,6 +90,7 @@ install_base_deps() {
       local pkgs=""
       check_command curl || pkgs="$pkgs curl"
       check_command git  || pkgs="$pkgs git"
+      check_command nginx || pkgs="$pkgs nginx"
       if [[ -n "$pkgs" ]]; then
         # shellcheck disable=SC2086
         brew install $pkgs
@@ -239,6 +232,94 @@ EOF
   log "Service created. Use: sudo systemctl enable --now zapravka"
 }
 
+setup_https() {
+  if [[ "$OS" == "macos" ]]; then
+    warn "HTTPS auto-setup via Nginx is supported on Linux only. On macOS use 'brew install mkcert' manually."
+    return
+  fi
+
+  if [[ $EUID -ne 0 ]]; then
+    warn "Run with sudo to set up HTTPS via Nginx"
+    return
+  fi
+
+  log "Setting up Nginx with HTTPS (self-signed certificate)..."
+
+  local cert_dir="/etc/nginx/ssl"
+  local cert="$cert_dir/zapravka.crt"
+  local key="$cert_dir/zapravka.key"
+
+  mkdir -p "$cert_dir"
+
+  if [[ ! -f "$cert" || ! -f "$key" ]]; then
+    log "Generating self-signed certificate..."
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout "$key" -out "$cert" \
+      -subj "/CN=localhost" \
+      -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+    chmod 600 "$key"
+    chmod 644 "$cert"
+  else
+    log "Certificate already exists"
+  fi
+
+  log "Creating Nginx config..."
+  cat > /etc/nginx/sites-available/zapravka <<'EOF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate /etc/nginx/ssl/zapravka.crt;
+    ssl_certificate_key /etc/nginx/ssl/zapravka.key;
+
+    location / {
+        proxy_pass http://127.0.0.1:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+
+  if [[ -d /etc/nginx/sites-enabled ]]; then
+    rm -f /etc/nginx/sites-enabled/default
+    ln -sf /etc/nginx/sites-available/zapravka /etc/nginx/sites-enabled/zapravka
+  else
+    # RHEL/CentOS style
+    cp /etc/nginx/sites-available/zapravka /etc/nginx/conf.d/zapravka.conf
+  fi
+
+  if nginx -t; then
+    systemctl enable nginx
+    systemctl restart nginx
+    log "Nginx HTTPS is running on https://<your-server-ip>/"
+    warn "Self-signed certificate will show a browser warning. Accept it or replace with a real certificate (e.g. Let's Encrypt)."
+  else
+    error "Nginx config test failed"
+  fi
+}
+
 main() {
   log "Starting installation of Zapravka..."
   detect_os
@@ -265,12 +346,13 @@ main() {
 
   if [[ $EUID -eq 0 ]] && check_command systemctl; then
     create_systemd_service
+    setup_https
   fi
 
   log "Installation complete!"
   log "Run: $ROOT/start.sh"
   log "Or:  sudo systemctl enable --now zapravka"
-  log "Open: http://localhost:5173"
+  log "Open: https://<your-server-ip>/"
 }
 
 main "$@"

@@ -32,17 +32,37 @@ zapravka/
 └── README.md
 ```
 
-## Быстрая установка на чистый сервер
+## Быстрая установка на чистый сервер (Linux)
 
 ```bash
-./install.sh  # проверяет и устанавливает Go, Node.js, npm, git, зависимости проекта
-./start.sh    # запускает backend и frontend
+sudo ./install.sh  # установит Go, Node.js, Nginx, зависимости, настроит HTTPS
+sudo ./start.sh    # запускает backend и frontend
 ```
 
-Поддерживаются:
-- Ubuntu/Debian (apt)
-- RHEL/CentOS (yum)
-- macOS (Homebrew)
+`install.sh` автоматически:
+- устанавливает Go, Node.js, npm, git, Nginx;
+- генерирует самоподписанный SSL-сертификат;
+- настраивает Nginx для HTTPS (443) с редиректом с HTTP (80);
+- создаёт systemd-сервис `zapravka`;
+- проксирует `/api` на backend.
+
+После установки открывайте:
+
+```
+https://<IP-адрес-сервера>/
+```
+
+Браузер предупредит о самоподписанном сертификате — это нормально. Примите сертификат или замените его на настоящий (Let's Encrypt).
+
+### macOS
+
+На macOS `install.sh` не настраивает Nginx. Запускайте вручную:
+
+```bash
+./install.sh
+./start.sh
+# открыть http://localhost:5173
+```
 
 ## Настройка портов
 

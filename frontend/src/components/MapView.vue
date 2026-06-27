@@ -14,6 +14,12 @@
         <button @click="searchAddress">Найти</button>
       </div>
       <p v-if="locationStatus" class="status">{{ locationStatus }}</p>
+      <button v-if="showRetryGeo" class="retry-btn" @click="requestGeoPermission">
+        🔄 Запросить геолокацию
+      </button>
+      <p v-if="!isSecure" class="secure-hint">
+        Для точной геолокации откройте сайт по HTTPS. Сейчас используется поиск по адресу или геолокация по IP.
+      </p>
     </div>
     <button class="locate-btn" @click="locateMe" title="Моё местоположение">
       📍
@@ -32,6 +38,8 @@ const mapRef = ref(null)
 const stations = ref([])
 const address = ref('')
 const locationStatus = ref('')
+const showRetryGeo = ref(false)
+const isSecure = ref(typeof window !== 'undefined' ? window.isSecureContext : false)
 let map = null
 let markersLayer = null
 let userMarker = null
@@ -302,27 +310,45 @@ async function locateByIP() {
   return false
 }
 
-function locateMe() {
-  if (!('geolocation' in navigator)) {
-    locationStatus.value = 'Геолокация не поддерживается браузером'
+function handleGeoError(err) {
+  console.warn('Геолокация недоступна:', err)
+  showRetryGeo.value = true
+
+  if (!isSecure.value) {
+    locationStatus.value = 'Геолокация недоступна по HTTP. Используйте HTTPS или поиск по адресу.'
     return
   }
-  locationStatus.value = 'Определение местоположения...'
+
+  let msg = 'Не удалось определить местоположение'
+  if (err && err.code === 1) msg = 'Доступ к геолокации запрещён. Нажмите «Запросить геолокацию» или разрешите доступ в настройках браузера'
+  if (err && err.code === 2) msg = 'Местоположение не определено'
+  if (err && err.code === 3) msg = 'Время ожидания истекло'
+  locationStatus.value = `${msg}.`
+}
+
+function requestGeoPermission() {
+  if (!('geolocation' in navigator)) {
+    locationStatus.value = 'Геолокация не поддерживается браузером'
+    showRetryGeo.value = false
+    return
+  }
+  showRetryGeo.value = false
+  locationStatus.value = 'Запрос разрешения на геолокацию...'
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude, longitude } = pos.coords
       await setMapView(latitude, longitude, 15, 'моё местоположение')
+      showRetryGeo.value = false
     },
     (err) => {
-      console.warn('Геолокация недоступна:', err)
-      let msg = 'Не удалось определить местоположение'
-      if (err.code === 1) msg = 'Доступ к геолокации запрещён'
-      if (err.code === 2) msg = 'Местоположение не определено'
-      if (err.code === 3) msg = 'Время ожидания истекло'
-      locationStatus.value = `${msg}. Используйте поиск по адресу.`
+      handleGeoError(err)
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   )
+}
+
+function locateMe() {
+  requestGeoPermission()
 }
 
 function initMap(lat, lng, zoom) {
@@ -365,12 +391,14 @@ onMounted(async () => {
         await loadStationsAround(latitude, longitude, PRELOAD_RADIUS, 'моё местоположение')
       },
       async (err) => {
-        console.warn('Геолокация недоступна:', err)
+        handleGeoError(err)
         const ok = await locateByIP()
         if (!ok) {
           initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
           await loadStationsAround(defaultCenter[0], defaultCenter[1], PRELOAD_RADIUS, 'Москва (по умолчанию)')
-          locationStatus.value = 'Геолокация недоступна. Показаны заправки в Москве. Используйте поиск.'
+          if (!locationStatus.value.includes('HTTP')) {
+            locationStatus.value = 'Геолокация недоступна. Показаны заправки в Москве. Используйте поиск.'
+          }
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -464,6 +492,32 @@ onUnmounted(() => {
   margin: 8px 0 0;
   font-size: 12px;
   color: #666;
+}
+
+.retry-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover {
+  background: #e2e8f0;
+}
+
+.secure-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 6px 8px;
+  border-radius: 6px;
 }
 
 .locate-btn {
