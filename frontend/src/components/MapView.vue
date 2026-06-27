@@ -4,6 +4,16 @@
     <div class="info">
       <h1>Карта заправок</h1>
       <p>Нажмите на заправку, чтобы сообщить о наличии топлива.</p>
+      <div class="search-box">
+        <input
+          v-model="address"
+          type="text"
+          placeholder="Введите город или адрес"
+          @keyup.enter="searchAddress"
+        />
+        <button @click="searchAddress">Найти</button>
+      </div>
+      <p v-if="locationStatus" class="status">{{ locationStatus }}</p>
     </div>
     <button class="locate-btn" @click="locateMe" title="Моё местоположение">
       📍
@@ -14,10 +24,14 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import L from 'leaflet'
+import { tileLayerOffline } from 'leaflet.offline'
+import { getCachedStations, saveStations, clearOldStations } from '../services/cache.js'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 const mapRef = ref(null)
 const stations = ref([])
+const address = ref('')
+const locationStatus = ref('')
 let map = null
 let markersLayer = null
 let userMarker = null
@@ -31,6 +45,8 @@ const fuelTypes = [
 
 const defaultCenter = [55.7558, 37.6173]
 const defaultZoom = 13
+const PRELOAD_RADIUS = 20000 // 20 км
+const VISIBLE_RADIUS = 5000  // 5 км
 
 function getFuelCounts(counts, fuel) {
   return counts && counts[fuel] ? counts[fuel] : { yes: 0, no: 0 }
@@ -116,22 +132,61 @@ function escapeHtml(text) {
   return div.innerHTML
 }
 
-async function loadStations() {
-  const center = map.getCenter()
+async function fetchStationsFromAPI(lat, lon, radius) {
+  const res = await fetch(
+    `${API_URL}/stations?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}&radius=${radius}`
+  )
+  if (!res.ok) throw new Error('failed to load stations')
+  const data = await res.json()
+  return data.stations || []
+}
+
+async function loadStationsAround(lat, lon, radius, source = '') {
   try {
-    const res = await fetch(
-      `${API_URL}/stations?lat=${center.lat.toFixed(6)}&lon=${center.lng.toFixed(6)}&radius=5000`
-    )
-    if (!res.ok) throw new Error('failed to load stations')
-    const data = await res.json()
-    stations.value = data.stations || []
-    renderMarkers()
+    // 1. Показываем кэшированные заправки сразу
+    const cached = await getCachedStations(lat, lon, radius)
+    if (cached.length > 0) {
+      stations.value = cached
+      renderMarkers()
+      if (source) {
+        locationStatus.value = `Показаны кэшированные заправки (${cached.length}) для: ${source}`
+      }
+    }
+
+    // 2. Загружаем свежие данные с сервера
+    const fresh = await fetchStationsFromAPI(lat, lon, radius)
+    await saveStations(fresh)
+    await clearOldStations()
+
+    // 3. Обновляем маркеры, если центр карты совпадает с запрошенной точкой
+    if (map) {
+      const center = map.getCenter()
+      const dx = Math.abs(center.lat - lat)
+      const dy = Math.abs(center.lng - lon)
+      if (dx < 0.01 && dy < 0.01) {
+        stations.value = fresh
+        renderMarkers()
+        if (source) {
+          locationStatus.value = `Загружены актуальные заправки (${fresh.length}) для: ${source}`
+        }
+      }
+    }
   } catch (err) {
     console.error('Ошибка загрузки заправок:', err)
+    if (!stations.value.length) {
+      locationStatus.value = 'Не удалось загрузить заправки. Проверьте подключение.'
+    }
   }
 }
 
+async function loadVisibleStations() {
+  if (!map) return
+  const center = map.getCenter()
+  await loadStationsAround(center.lat, center.lng, VISIBLE_RADIUS)
+}
+
 function renderMarkers() {
+  if (!markersLayer) return
   markersLayer.clearLayers()
   for (const station of stations.value) {
     const marker = L.marker([station.lat, station.lon], {
@@ -175,29 +230,96 @@ function showUserPosition(lat, lng) {
   userMarker.bindPopup('Вы здесь')
 }
 
-function setMapView(lat, lng, zoom) {
+async function setMapView(lat, lng, zoom, source = '') {
   map.setView([lat, lng], zoom)
   showUserPosition(lat, lng)
-  loadStations()
+  saveLocation(lat, lng, zoom)
+  await loadStationsAround(lat, lng, PRELOAD_RADIUS, source)
+}
+
+function saveLocation(lat, lng, zoom) {
+  try {
+    localStorage.setItem('zapravka_location', JSON.stringify({ lat, lng, zoom }))
+  } catch (e) {
+    // ignore
+  }
+}
+
+function loadSavedLocation() {
+  try {
+    const saved = localStorage.getItem('zapravka_location')
+    if (saved) {
+      const { lat, lng, zoom } = JSON.parse(saved)
+      if (lat && lng) {
+        return { lat, lng, zoom: zoom || defaultZoom }
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null
+}
+
+async function searchAddress() {
+  const q = address.value.trim()
+  if (!q) return
+
+  locationStatus.value = 'Поиск...'
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
+      { headers: { 'User-Agent': 'zapravka/1.0' } }
+    )
+    if (!res.ok) throw new Error('geocoding failed')
+    const data = await res.json()
+    if (!data || data.length === 0) {
+      locationStatus.value = 'Адрес не найден'
+      return
+    }
+    const place = data[0]
+    const lat = parseFloat(place.lat)
+    const lon = parseFloat(place.lon)
+    await setMapView(lat, lon, 15, place.display_name)
+  } catch (err) {
+    console.error('Ошибка геокодирования:', err)
+    locationStatus.value = 'Не удалось найти адрес'
+  }
+}
+
+async function locateByIP() {
+  locationStatus.value = 'Определение по IP...'
+  try {
+    const res = await fetch('https://ipapi.co/json/')
+    if (!res.ok) throw new Error('ip location failed')
+    const data = await res.json()
+    if (data.latitude && data.longitude) {
+      await setMapView(data.latitude, data.longitude, 12, `примерное местоположение (${data.city || 'по IP'})`)
+      return true
+    }
+  } catch (err) {
+    console.warn('IP геолокация недоступна:', err)
+  }
+  return false
 }
 
 function locateMe() {
   if (!('geolocation' in navigator)) {
-    alert('Геолокация не поддерживается вашим браузером')
+    locationStatus.value = 'Геолокация не поддерживается браузером'
     return
   }
+  locationStatus.value = 'Определение местоположения...'
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
+    async (pos) => {
       const { latitude, longitude } = pos.coords
-      setMapView(latitude, longitude, 15)
+      await setMapView(latitude, longitude, 15, 'моё местоположение')
     },
     (err) => {
       console.warn('Геолокация недоступна:', err)
-      let msg = 'Не удалось определить местоположение.'
-      if (err.code === 1) msg = 'Доступ к геолокации запрещён. Разрешите доступ в настройках браузера.'
-      if (err.code === 2) msg = 'Местоположение не определено.'
-      if (err.code === 3) msg = 'Время ожидания геолокации истекло.'
-      alert(msg)
+      let msg = 'Не удалось определить местоположение'
+      if (err.code === 1) msg = 'Доступ к геолокации запрещён'
+      if (err.code === 2) msg = 'Местоположение не определено'
+      if (err.code === 3) msg = 'Время ожидания истекло'
+      locationStatus.value = `${msg}. Используйте поиск по адресу.`
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   )
@@ -206,37 +328,60 @@ function locateMe() {
 function initMap(lat, lng, zoom) {
   map = L.map(mapRef.value).setView([lat, lng], zoom)
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // Оффлайн-кэширование тайлов карты
+  tileLayerOffline('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19
+    maxZoom: 19,
+    crossOrigin: true
   }).addTo(map)
 
   markersLayer = L.layerGroup().addTo(map)
 
   map.on('moveend', () => {
     clearTimeout(moveTimeout)
-    moveTimeout = setTimeout(loadStations, 300)
+    moveTimeout = setTimeout(loadVisibleStations, 300)
   })
 
   showUserPosition(lat, lng)
-  loadStations()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const saved = loadSavedLocation()
+  if (saved) {
+    initMap(saved.lat, saved.lng, saved.zoom)
+    locationStatus.value = 'Загрузка заправок в радиусе 20 км...'
+    await loadStationsAround(saved.lat, saved.lng, PRELOAD_RADIUS, 'сохранённое местоположение')
+    return
+  }
+
   if ('geolocation' in navigator) {
+    locationStatus.value = 'Определение местоположения...'
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude, longitude } = pos.coords
         initMap(latitude, longitude, 14)
+        saveLocation(latitude, longitude, 14)
+        locationStatus.value = 'Загрузка заправок в радиусе 20 км...'
+        await loadStationsAround(latitude, longitude, PRELOAD_RADIUS, 'моё местоположение')
       },
-      (err) => {
+      async (err) => {
         console.warn('Геолокация недоступна:', err)
-        initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
+        const ok = await locateByIP()
+        if (!ok) {
+          initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
+          await loadStationsAround(defaultCenter[0], defaultCenter[1], PRELOAD_RADIUS, 'Москва (по умолчанию)')
+          locationStatus.value = 'Геолокация недоступна. Показаны заправки в Москве. Используйте поиск.'
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     )
   } else {
-    initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
+    const ok = await locateByIP()
+    if (!ok) {
+      initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
+      await loadStationsAround(defaultCenter[0], defaultCenter[1], PRELOAD_RADIUS, 'Москва (по умолчанию)')
+      locationStatus.value = 'Геолокация недоступна. Показаны заправки в Москве. Используйте поиск.'
+    }
   }
 })
 
@@ -268,7 +413,7 @@ onUnmounted(() => {
   padding: 12px 16px;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  max-width: 320px;
+  max-width: 340px;
 }
 
 .info h1 {
@@ -277,9 +422,48 @@ onUnmounted(() => {
 }
 
 .info p {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 13px;
   color: #555;
+}
+
+.search-box {
+  display: flex;
+  gap: 6px;
+}
+
+.search-box input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.search-box input:focus {
+  border-color: #2563eb;
+}
+
+.search-box button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search-box button:hover {
+  background: #1d4ed8;
+}
+
+.status {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #666;
 }
 
 .locate-btn {

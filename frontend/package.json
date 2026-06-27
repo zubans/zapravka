@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "leaflet.offline": "^3.2.1",
     "vue": "^3.4.21"
   },
   "devDependencies": {

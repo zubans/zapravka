@@ -2,8 +2,9 @@
 > zapravka-frontend@0.1.0 dev
 > vite
 
+Re-optimizing dependencies because lockfile has changed
 
-  VITE v5.4.21  ready in 127 ms
+  VITE v5.4.21  ready in 136 ms
 
   ➜  Local:   http://localhost:80/
   ➜  Network: http://192.168.1.59:80/
