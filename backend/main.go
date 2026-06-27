@@ -328,6 +328,28 @@ func (a *App) handleCacheInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (a *App) handleVotes(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	if r.Method == http.MethodOptions {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idsParam := r.URL.Query().Get("ids")
+	if idsParam == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"counts": map[string]StationCounts{}})
+		return
+	}
+
+	ids := strings.Split(idsParam, ",")
+	counts := a.store.CountsMany(ids)
+
+	writeJSON(w, http.StatusOK, map[string]any{"counts": counts})
+}
+
 func (a *App) handleVote(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w)
 	if r.Method == http.MethodOptions {
@@ -393,6 +415,10 @@ func main() {
 	}
 	defer cache.Close()
 
+	if n, err := cache.DeleteDemoStations(); err == nil && n > 0 {
+		log.Printf("Removed %d old demo/test stations from cache", n)
+	}
+
 	if *populate {
 		app := &App{cache: cache}
 
@@ -427,6 +453,7 @@ func main() {
 
 	http.HandleFunc("/api/stations", app.handleStations)
 	http.HandleFunc("/api/vote", app.handleVote)
+	http.HandleFunc("/api/votes", app.handleVotes)
 	http.HandleFunc("/api/cache/info", app.handleCacheInfo)
 
 	count, _ := cache.Count()

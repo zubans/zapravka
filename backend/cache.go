@@ -180,6 +180,17 @@ func (c *StationCache) CleanupOld() error {
 	return err
 }
 
+// DeleteDemoStations удаляет старые демо-заправки, которые раньше использовались для тестов.
+func (c *StationCache) DeleteDemoStations() (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	res, err := c.db.Exec("DELETE FROM stations WHERE id LIKE 'demo-%' OR id LIKE 'test-%'")
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (c *StationCache) Close() error {
 	return c.db.Close()
 }

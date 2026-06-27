@@ -1,8 +1,10 @@
 const DB_NAME = 'zapravka'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_NAME = 'stations'
+const QUERY_STORE_NAME = 'queries'
 const TILE_STORE_NAME = 'tiles'
-const STATION_TTL_MS = 60 * 60 * 1000 // 1 час
+const STATION_TTL_MS = 24 * 60 * 60 * 1000 // сутки
+const QUERY_TTL_MS = 60 * 60 * 1000 // 1 час — после этого перезапрашиваем сервер
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -16,6 +18,12 @@ function openDB() {
         store.createIndex('lat', 'lat', { unique: false })
         store.createIndex('lon', 'lon', { unique: false })
         store.createIndex('fetchedAt', 'fetchedAt', { unique: false })
+      }
+      if (!db.objectStoreNames.contains(QUERY_STORE_NAME)) {
+        const queryStore = db.createObjectStore(QUERY_STORE_NAME, { keyPath: 'id', autoIncrement: true })
+        queryStore.createIndex('lat', 'lat', { unique: false })
+        queryStore.createIndex('lon', 'lon', { unique: false })
+        queryStore.createIndex('fetchedAt', 'fetchedAt', { unique: false })
       }
       if (!db.objectStoreNames.contains(TILE_STORE_NAME)) {
         db.createObjectStore(TILE_STORE_NAME, { keyPath: 'key' })
@@ -98,6 +106,68 @@ export async function clearOldStations() {
       if (now - s.fetchedAt > STATION_TTL_MS) {
         store.delete(cursor.primaryKey)
         deleted++
+      }
+      cursor.continue()
+    }
+  })
+}
+
+export async function saveQueryCoverage(lat, lon, radiusMeters) {
+  const db = await openDB()
+  const tx = db.transaction(QUERY_STORE_NAME, 'readwrite')
+  const store = tx.objectStore(QUERY_STORE_NAME)
+  store.put({ lat, lon, radius: radiusMeters, fetchedAt: Date.now() })
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+export async function isCoveredByCache(lat, lon, radiusMeters) {
+  const db = await openDB()
+  const tx = db.transaction(QUERY_STORE_NAME, 'readonly')
+  const store = tx.objectStore(QUERY_STORE_NAME)
+  const now = Date.now()
+
+  return new Promise((resolve, reject) => {
+    const req = store.openCursor()
+    req.onerror = () => reject(req.error)
+    req.onsuccess = (event) => {
+      const cursor = event.target.result
+      if (!cursor) {
+        resolve(false)
+        return
+      }
+      const q = cursor.value
+      if (now - q.fetchedAt < QUERY_TTL_MS) {
+        const d = haversine(lat, lon, q.lat, q.lon)
+        if (d + radiusMeters <= q.radius) {
+          resolve(true)
+          return
+        }
+      }
+      cursor.continue()
+    }
+  })
+}
+
+export async function clearOldQueries() {
+  const db = await openDB()
+  const tx = db.transaction(QUERY_STORE_NAME, 'readwrite')
+  const store = tx.objectStore(QUERY_STORE_NAME)
+  const now = Date.now()
+
+  return new Promise((resolve, reject) => {
+    const req = store.openCursor()
+    req.onerror = () => reject(req.error)
+    req.onsuccess = (event) => {
+      const cursor = event.target.result
+      if (!cursor) {
+        resolve()
+        return
+      }
+      if (now - cursor.value.fetchedAt > QUERY_TTL_MS) {
+        store.delete(cursor.primaryKey)
       }
       cursor.continue()
     }

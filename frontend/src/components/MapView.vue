@@ -31,7 +31,14 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import L from 'leaflet'
 import { tileLayerOffline } from 'leaflet.offline'
-import { getCachedStations, saveStations, clearOldStations } from '../services/cache.js'
+import {
+  getCachedStations,
+  saveStations,
+  clearOldStations,
+  saveQueryCoverage,
+  isCoveredByCache,
+  clearOldQueries
+} from '../services/cache.js'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 const mapRef = ref(null)
@@ -44,6 +51,9 @@ let map = null
 let markersLayer = null
 let userMarker = null
 let moveTimeout = null
+
+const COUNTS_CACHE_TTL_MS = 30 * 1000
+const countsCache = new Map() // id -> { counts, ts }
 
 const fuelTypes = [
   { key: '92', label: 'АИ-92' },
@@ -142,60 +152,111 @@ function escapeHtml(text) {
 
 async function fetchStationsFromAPI(lat, lon, radius) {
   const res = await fetch(
-    `${API_URL}/stations?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}&radius=${radius}`
+    `${API_URL}/stations?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}&radius=${Math.round(radius)}`
   )
   if (!res.ok) throw new Error('failed to load stations')
   const data = await res.json()
   return data.stations || []
 }
 
-async function loadStationsAround(lat, lon, radius, source = '') {
+async function fetchVoteCounts(ids) {
+  if (!ids || ids.length === 0) return {}
+  const res = await fetch(`${API_URL}/votes?ids=${encodeURIComponent(ids.join(','))}`)
+  if (!res.ok) throw new Error('failed to load vote counts')
+  const data = await res.json()
+  return data.counts || {}
+}
+
+function getVisibleRadius() {
+  if (!map) return VISIBLE_RADIUS
+  const bounds = map.getBounds()
+  const center = bounds.getCenter()
+  const ne = bounds.getNorthEast()
+  const sw = bounds.getSouthWest()
+  // половина диагонали видимой области
+  const dLat = toRad(ne.lat - sw.lat)
+  const dLon = toRad(ne.lng - sw.lng) * Math.cos(toRad(center.lat))
+  const a = Math.sin(dLat / 2) ** 2 + Math.sin(dLon / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return Math.max(VISIBLE_RADIUS, (6371000 * c) / 2)
+}
+
+function toRad(x) {
+  return (x * Math.PI) / 180
+}
+
+async function mergeVoteCounts() {
+  if (!stations.value.length) return
   try {
-    // 1. Показываем кэшированные заправки сразу
-    const cached = await getCachedStations(lat, lon, radius)
-    if (cached.length > 0) {
-      stations.value = cached
-      renderMarkers()
-      if (source) {
-        locationStatus.value = `Показаны кэшированные заправки (${cached.length}) для: ${source}`
+    const now = Date.now()
+    const idsToFetch = []
+    for (const s of stations.value) {
+      const cached = countsCache.get(s.id)
+      if (!cached || now - cached.ts > COUNTS_CACHE_TTL_MS) {
+        idsToFetch.push(s.id)
       }
     }
 
-    // 2. Проверяем, нужно ли обновлять данные с сервера
-    const cacheMaxAge = 60 * 60 * 1000 // 1 час в браузере
-    const now = Date.now()
-    const needsUpdate = cached.length === 0 || cached.some((s) => now - s.fetchedAt > cacheMaxAge)
-
-    if (!needsUpdate) {
-      return
+    if (idsToFetch.length > 0) {
+      const counts = await fetchVoteCounts(idsToFetch)
+      for (const [id, c] of Object.entries(counts)) {
+        countsCache.set(id, { counts: c, ts: now })
+      }
     }
 
-    // 3. Загружаем свежие данные с сервера (только если кэш пуст или устарел)
-    const fresh = await fetchStationsFromAPI(lat, lon, radius)
+    for (const s of stations.value) {
+      const cached = countsCache.get(s.id)
+      if (cached) {
+        s.counts = cached.counts
+      }
+    }
+    renderMarkers()
+  } catch (err) {
+    console.error('Ошибка загрузки голосов:', err)
+  }
+}
 
-    // Не перезаписываем кэш пустым ответом с сервера
-    if (fresh.length > 0) {
-      await saveStations(fresh)
-      await clearOldStations()
+async function loadStationsAround(lat, lon, radius, source = '') {
+  try {
+    // 1. Всегда сначала показываем кэшированные заправки для этой области
+    const cached = await getCachedStations(lat, lon, radius)
+    stations.value = cached
+    renderMarkers()
 
-      // 4. Обновляем маркеры, если центр карты совпадает с запрошенной точкой
-      if (map) {
-        const center = map.getCenter()
-        const dx = Math.abs(center.lat - lat)
-        const dy = Math.abs(center.lng - lon)
-        if (dx < 0.01 && dy < 0.01) {
-          stations.value = fresh
-          renderMarkers()
-          if (source) {
-            locationStatus.value = `Загружены актуальные заправки (${fresh.length}) для: ${source}`
+    // 2. Подгружаем актуальные голоса для отображаемых станций
+    await mergeVoteCounts()
+
+    // 3. Проверяем, покрывает ли кэш эту область (серверный запрос делали < 1 час назад)
+    const covered = await isCoveredByCache(lat, lon, radius)
+
+    if (!covered) {
+      // 4. Если области нет в кэше — запрашиваем станции с сервера
+      const fresh = await fetchStationsFromAPI(lat, lon, radius)
+
+      // Сохраняем покрытие даже для пустого ответа, чтобы не долбить сервер
+      await saveQueryCoverage(lat, lon, radius)
+      await clearOldQueries()
+
+      if (fresh.length > 0) {
+        await saveStations(fresh)
+        await clearOldStations()
+
+        // Обновляем маркеры, если центр карты всё ещё рядом с запрошенной точкой
+        if (map) {
+          const center = map.getCenter()
+          const dx = Math.abs(center.lat - lat)
+          const dy = Math.abs(center.lng - lon)
+          if (dx < 0.02 && dy < 0.02) {
+            stations.value = fresh
+            renderMarkers()
+            await mergeVoteCounts()
           }
         }
       }
-    } else if (cached.length === 0) {
-      // Если и кэш пуст, и сервер ничего не вернул
-      if (source) {
-        locationStatus.value = 'В этой области заправок не найдено'
-      }
+    }
+
+    if (source) {
+      locationStatus.value = `Заправок в области: ${stations.value.length}`
     }
   } catch (err) {
     console.error('Ошибка загрузки заправок:', err)
@@ -208,7 +269,8 @@ async function loadStationsAround(lat, lon, radius, source = '') {
 async function loadVisibleStations() {
   if (!map) return
   const center = map.getCenter()
-  await loadStationsAround(center.lat, center.lng, VISIBLE_RADIUS)
+  const radius = getVisibleRadius()
+  await loadStationsAround(center.lat, center.lng, radius)
 }
 
 function renderMarkers() {
@@ -383,7 +445,7 @@ function initMap(lat, lng, zoom) {
 
   map.on('moveend', () => {
     clearTimeout(moveTimeout)
-    moveTimeout = setTimeout(loadVisibleStations, 800)
+    moveTimeout = setTimeout(loadVisibleStations, 300)
   })
 
   showUserPosition(lat, lng)
