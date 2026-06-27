@@ -48,6 +48,17 @@ check_command() {
   command -v "$1" >/dev/null 2>&1
 }
 
+go_arch() {
+  case "$ARCH" in
+    x86_64)  echo "amd64" ;;
+    amd64)   echo "amd64" ;;
+    aarch64) echo "arm64" ;;
+    arm64)   echo "arm64" ;;
+    armv7l)  echo "armv6l" ;;
+    *)       echo "$ARCH" ;;
+  esac
+}
+
 install_base_deps() {
   log "Checking base dependencies (curl, git, build tools)..."
   case "$OS" in
@@ -94,15 +105,21 @@ install_base_deps() {
 
 install_go() {
   if check_command go; then
-    log "Go already installed: $(go version)"
-    return
+    if go version >/dev/null 2>&1; then
+      log "Go already installed: $(go version)"
+      return
+    fi
+    warn "Found broken Go installation, reinstalling..."
+    rm -rf /usr/local/go
   fi
 
   log "Installing Go..."
   case "$OS" in
     debian|rhel|linux)
       local go_version="1.22.4"
-      local go_tarball="go${go_version}.linux-amd64.tar.gz"
+      local go_arch="$(go_arch)"
+      local go_tarball="go${go_version}.linux-${go_arch}.tar.gz"
+      log "Downloading ${go_tarball}..."
       cd /tmp
       curl -fsSL "https://go.dev/dl/${go_tarball}" -o "${go_tarball}"
       rm -rf /usr/local/go
@@ -119,7 +136,7 @@ install_go() {
       ;;
   esac
 
-  if ! check_command go; then
+  if ! check_command go || ! go version >/dev/null 2>&1; then
     error "Go installation failed"
     exit 1
   fi
