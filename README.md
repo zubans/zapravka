@@ -69,11 +69,11 @@ https://<IP-адрес-сервера>/
 Файл `frontend/.env`:
 
 ```env
-VITE_PORT=80
-VITE_API_URL=http://localhost:8081
+VITE_PORT=5173
+VITE_API_URL=/api
 ```
 
-- `VITE_PORT` — порт frontend (по умолчанию `80`).
+- `VITE_PORT` — порт frontend (по умолчанию `5173`).
 - `VITE_API_URL` — URL backend для проксирования API.
 
 Backend настраивается переменными окружения:
@@ -82,9 +82,23 @@ Backend настраивается переменными окружения:
 HOST=0.0.0.0 PORT=8081 ./backend/zapravka
 ```
 
-По умолчанию backend слушает `0.0.0.0:8081`, frontend — `0.0.0.0:80`.
+По умолчанию backend слушает `0.0.0.0:8081`, frontend — `0.0.0.0:5173`. Nginx (после `install.sh`) выставляет сайт наружу на `443`.
 
-> **Важно:** порты ниже 1024 (например, 80) требуют root-прав на Linux/macOS. `install.sh` и `start.sh` на Linux должны запускаться от root.
+> **Важно:** порты ниже 1024 (например, 80/443) требуют root-прав на Linux. `install.sh` и `start.sh` на Linux должны запускаться от root.
+
+## Ручное заполнение кэша заправок
+
+Бинарник backend умеет заполнять серверный кэш вручную:
+
+```bash
+# Заполнить все предопределённые точки с радиусом 50 км
+./backend/zapravka -populate -all -radius=50000
+
+# Заполнить кэш для одной конкретной точки
+./backend/zapravka -populate -lat=55.7558 -lon=37.6173 -radius=50000 -name="Москва"
+```
+
+Данные сохраняются в `zapravka_cache.db` и остаются доступными после перезагрузки сервера.
 
 ## Запуск
 

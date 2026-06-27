@@ -1,49 +1,29 @@
-2026/06/27 14:54:55 Starting cache preseed...
-2026/06/27 14:54:55 Server listening on 0.0.0.0:8081
-2026/06/27 14:54:55 Fetching stations for preseed area: Москва
-2026/06/27 14:54:56 Preseeded Москва: 586 stations
-2026/06/27 14:54:56 Fetching stations for preseed area: Курск
-2026/06/27 14:55:07 Preseeded Курск: 76 stations
-2026/06/27 14:55:07 Fetching stations for preseed area: Орёл
-2026/06/27 14:55:08 Preseeded Орёл: 49 stations
-2026/06/27 14:55:08 Fetching stations for preseed area: Воронеж
-2026/06/27 14:55:09 Preseeded Воронеж: 107 stations
-2026/06/27 14:55:09 Fetching stations for preseed area: Ростов-на-Дону
-2026/06/27 14:55:10 Preseeded Ростов-на-Дону: 131 stations
-2026/06/27 14:55:10 Fetching stations for preseed area: Краснодар
-2026/06/27 14:55:11 Preseeded Краснодар: 114 stations
-2026/06/27 14:55:11 Fetching stations for preseed area: Ставрополь
-2026/06/27 14:55:12 Preseeded Ставрополь: 102 stations
-2026/06/27 14:55:12 Fetching stations for preseed area: Черкесск
-2026/06/27 14:55:13 Preseeded Черкесск: 28 stations
-2026/06/27 14:55:14 Fetching stations for preseed area: Краснодарский край (Анапа)
-2026/06/27 14:55:14 Preseeded Краснодарский край (Анапа): 24 stations
-2026/06/27 14:55:15 Fetching stations for preseed area: Краснодарский край (Сочи)
-2026/06/27 14:55:16 Preseeded Краснодарский край (Сочи): 18 stations
-2026/06/27 14:55:16 Fetching stations for preseed area: Краснодарский край (Новороссийск)
-2026/06/27 14:55:17 Preseeded Краснодарский край (Новороссийск): 22 stations
-2026/06/27 14:55:17 Preseed area is fresh: М4 Дон (Москва-Видное)
-2026/06/27 14:55:17 Fetching stations for preseed area: М4 Дон (Кашира)
-2026/06/27 14:55:19 Preseeded М4 Дон (Кашира): 15 stations
-2026/06/27 14:55:19 Fetching stations for preseed area: М4 Дон (Серпухов)
-2026/06/27 14:55:20 Preseeded М4 Дон (Серпухов): 24 stations
-2026/06/27 14:55:20 Fetching stations for preseed area: М4 Дон (Тула)
-2026/06/27 14:55:23 Preseeded М4 Дон (Тула): 48 stations
-2026/06/27 14:55:23 Fetching stations for preseed area: М4 Дон (Плавск)
-2026/06/27 14:55:24 Preseeded М4 Дон (Плавск): 2 stations
-2026/06/27 14:55:24 Fetching stations for preseed area: М4 Дон (Ефремов)
-2026/06/27 14:55:27 Preseeded М4 Дон (Ефремов): 8 stations
-2026/06/27 14:55:27 Preseed area is fresh: М4 Дон (Курск)
-2026/06/27 14:55:27 Fetching stations for preseed area: М4 Дон (Обоянь)
-2026/06/27 14:55:29 Preseeded М4 Дон (Обоянь): 5 stations
-2026/06/27 14:55:29 Fetching stations for preseed area: М4 Дон (Строитель)
-2026/06/27 14:55:32 Preseeded М4 Дон (Строитель): 6 stations
-2026/06/27 14:55:32 Preseed area is fresh: М4 Дон (Воронеж)
-2026/06/27 14:55:32 Fetching stations for preseed area: М4 Дон (Богучар)
-2026/06/27 14:55:34 Preseeded М4 Дон (Богучар): 10 stations
-2026/06/27 14:55:34 Fetching stations for preseed area: М4 Дон (Каменск-Шахтинский)
-2026/06/27 14:55:39 Preseeded М4 Дон (Каменск-Шахтинский): 15 stations
-2026/06/27 14:55:39 Preseed area is fresh: М4 Дон (Ростов-на-Дону)
-2026/06/27 14:55:39 Preseed area is fresh: М4 Дон (Аксай)
-2026/06/27 14:55:39 Preseed area is fresh: М4 Дон (Краснодар)
-2026/06/27 14:55:39 Preseed complete in 44.552024584s. Total cached stations: 1390
+2026/06/27 15:11:05 Starting cache preseed...
+2026/06/27 15:11:05 Server listening on 0.0.0.0:8081
+2026/06/27 15:11:05 Preseed area is fresh: Москва
+2026/06/27 15:11:05 Preseed area is fresh: Курск
+2026/06/27 15:11:05 Preseed area is fresh: Орёл
+2026/06/27 15:11:05 Preseed area is fresh: Воронеж
+2026/06/27 15:11:05 Preseed area is fresh: Ростов-на-Дону
+2026/06/27 15:11:05 Preseed area is fresh: Краснодар
+2026/06/27 15:11:05 Preseed area is fresh: Ставрополь
+2026/06/27 15:11:05 Preseed area is fresh: Черкесск
+2026/06/27 15:11:05 Preseed area is fresh: Краснодарский край (Анапа)
+2026/06/27 15:11:05 Preseed area is fresh: Краснодарский край (Сочи)
+2026/06/27 15:11:05 Preseed area is fresh: Краснодарский край (Новороссийск)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Москва-Видное)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Кашира)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Серпухов)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Тула)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Плавск)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Ефремов)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Курск)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Обоянь)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Строитель)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Воронеж)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Богучар)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Каменск-Шахтинский)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Ростов-на-Дону)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Аксай)
+2026/06/27 15:11:05 Preseed area is fresh: М4 Дон (Краснодар)
+2026/06/27 15:11:05 Preseed complete in 15.747834ms. Total cached stations: 1411

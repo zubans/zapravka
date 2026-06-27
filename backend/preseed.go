@@ -46,6 +46,27 @@ var preseedPoints = []PreseedPoint{
 	{Name: "М4 Дон (Краснодар)", Lat: 45.0393, Lon: 38.9872, Radius: 15000},
 }
 
+func (a *App) PopulatePoint(lat, lon, radius float64, name string) {
+	log.Printf("Populating cache for %s (lat=%.4f, lon=%.4f, radius=%.0f m)...", name, lat, lon, radius)
+	stations, err := a.cache.FetchAndCache(lat, lon, radius)
+	if err != nil {
+		log.Printf("Failed to populate %s: %v", name, err)
+		return
+	}
+	log.Printf("Populated %s: %d stations", name, len(stations))
+}
+
+func (a *App) PopulateAll(radius float64) {
+	log.Printf("Populating cache for all predefined points with radius %.0f m...", radius)
+	start := time.Now()
+	for _, p := range preseedPoints {
+		a.PopulatePoint(p.Lat, p.Lon, radius, p.Name)
+		time.Sleep(500 * time.Millisecond)
+	}
+	count, _ := a.cache.Count()
+	log.Printf("Populate all complete in %v. Total cached stations: %d", time.Since(start), count)
+}
+
 func (a *App) preseedCache() {
 	log.Println("Starting cache preseed...")
 	start := time.Now()

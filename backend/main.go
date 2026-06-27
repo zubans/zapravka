@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -219,7 +220,7 @@ func (a *App) handleStations(w http.ResponseWriter, r *http.Request) {
 	stations, err := a.cache.GetStations(lat, lon, radius)
 	if err != nil {
 		log.Printf("get stations error: %v", err)
-		stations = demoStations(lat, lon, radius)
+		stations = []Station{}
 	}
 
 	ids := make([]string, len(stations))
@@ -305,37 +306,6 @@ func parseOSM(osm OSMResponse) []Station {
 	return stations
 }
 
-func demoStations(lat, lon, radius float64) []Station {
-	// Если внешние API недоступны, возвращаем несколько демо-заправок рядом с центром
-	step := radius / 111000.0 // примерно градусы
-	return []Station{
-		{
-			ID:    "demo-1",
-			Lat:   lat + step,
-			Lon:   lon + step,
-			Name:  "Демо АЗС №1",
-			Brand: "Демо",
-			Tags:  map[string]string{"amenity": "fuel"},
-		},
-		{
-			ID:    "demo-2",
-			Lat:   lat - step,
-			Lon:   lon - step*0.5,
-			Name:  "Демо АЗС №2",
-			Brand: "Демо",
-			Tags:  map[string]string{"amenity": "fuel"},
-		},
-		{
-			ID:    "demo-3",
-			Lat:   lat + step*0.3,
-			Lon:   lon - step*1.2,
-			Name:  "Демо АЗС №3",
-			Brand: "Демо",
-			Tags:  map[string]string{"amenity": "fuel"},
-		},
-	}
-}
-
 func (a *App) handleVote(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w)
 	if r.Method == http.MethodOptions {
@@ -385,14 +355,38 @@ func (a *App) handleVote(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	store := NewVoteStore()
-	store.StartCleanup()
+	var (
+		populate = flag.Bool("populate", false, "Ручное заполнение кэша заправок")
+		lat      = flag.Float64("lat", 0, "Широта точки")
+		lon      = flag.Float64("lon", 0, "Долгота точки")
+		radius   = flag.Float64("radius", 50000, "Радиус в метрах")
+		name     = flag.String("name", "", "Название точки")
+		all      = flag.Bool("all", false, "Заполнить все предопределённые точки")
+	)
+	flag.Parse()
 
 	cache, err := NewStationCache(cacheDBPath)
 	if err != nil {
 		log.Fatalf("failed to open station cache: %v", err)
 	}
 	defer cache.Close()
+
+	if *populate {
+		app := &App{cache: cache}
+
+		if (*lat != 0 || *lon != 0) && !*all {
+			if *name == "" {
+				*name = fmt.Sprintf("%.4f, %.4f", *lat, *lon)
+			}
+			app.PopulatePoint(*lat, *lon, *radius, *name)
+		} else {
+			app.PopulateAll(*radius)
+		}
+		return
+	}
+
+	store := NewVoteStore()
+	store.StartCleanup()
 
 	app := &App{store: store, cache: cache}
 
