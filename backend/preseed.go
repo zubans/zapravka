@@ -21,6 +21,7 @@ var preseedPoints = []PreseedPoint{
 	{Name: "Орёл", Lat: 52.9685, Lon: 36.0696, Radius: 15000},
 	{Name: "Воронеж", Lat: 51.6755, Lon: 39.2089, Radius: 20000},
 	{Name: "Ростов-на-Дону", Lat: 47.2225, Lon: 39.7187, Radius: 20000},
+	{Name: "Обоянь", Lat: 51.2104, Lon: 36.2756, Radius: 15000},
 	{Name: "Краснодар", Lat: 45.0393, Lon: 38.9872, Radius: 20000},
 	{Name: "Ставрополь", Lat: 45.0445, Lon: 41.9691, Radius: 15000},
 	{Name: "Черкесск", Lat: 44.2269, Lon: 42.0468, Radius: 15000},

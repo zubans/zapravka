@@ -161,22 +161,40 @@ async function loadStationsAround(lat, lon, radius, source = '') {
       }
     }
 
-    // 2. Загружаем свежие данные с сервера
-    const fresh = await fetchStationsFromAPI(lat, lon, radius)
-    await saveStations(fresh)
-    await clearOldStations()
+    // 2. Проверяем, нужно ли обновлять данные с сервера
+    const cacheMaxAge = 60 * 60 * 1000 // 1 час в браузере
+    const now = Date.now()
+    const needsUpdate = cached.length === 0 || cached.some((s) => now - s.fetchedAt > cacheMaxAge)
 
-    // 3. Обновляем маркеры, если центр карты совпадает с запрошенной точкой
-    if (map) {
-      const center = map.getCenter()
-      const dx = Math.abs(center.lat - lat)
-      const dy = Math.abs(center.lng - lon)
-      if (dx < 0.01 && dy < 0.01) {
-        stations.value = fresh
-        renderMarkers()
-        if (source) {
-          locationStatus.value = `Загружены актуальные заправки (${fresh.length}) для: ${source}`
+    if (!needsUpdate) {
+      return
+    }
+
+    // 3. Загружаем свежие данные с сервера (только если кэш пуст или устарел)
+    const fresh = await fetchStationsFromAPI(lat, lon, radius)
+
+    // Не перезаписываем кэш пустым ответом с сервера
+    if (fresh.length > 0) {
+      await saveStations(fresh)
+      await clearOldStations()
+
+      // 4. Обновляем маркеры, если центр карты совпадает с запрошенной точкой
+      if (map) {
+        const center = map.getCenter()
+        const dx = Math.abs(center.lat - lat)
+        const dy = Math.abs(center.lng - lon)
+        if (dx < 0.01 && dy < 0.01) {
+          stations.value = fresh
+          renderMarkers()
+          if (source) {
+            locationStatus.value = `Загружены актуальные заправки (${fresh.length}) для: ${source}`
+          }
         }
+      }
+    } else if (cached.length === 0) {
+      // Если и кэш пуст, и сервер ничего не вернул
+      if (source) {
+        locationStatus.value = 'В этой области заправок не найдено'
       }
     }
   } catch (err) {
@@ -365,7 +383,7 @@ function initMap(lat, lng, zoom) {
 
   map.on('moveend', () => {
     clearTimeout(moveTimeout)
-    moveTimeout = setTimeout(loadVisibleStations, 300)
+    moveTimeout = setTimeout(loadVisibleStations, 800)
   })
 
   showUserPosition(lat, lng)
