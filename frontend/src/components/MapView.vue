@@ -5,6 +5,9 @@
       <h1>Карта заправок</h1>
       <p>Нажмите на заправку, чтобы сообщить о наличии топлива.</p>
     </div>
+    <button class="locate-btn" @click="locateMe" title="Моё местоположение">
+      📍
+    </button>
   </div>
 </template>
 
@@ -17,6 +20,7 @@ const mapRef = ref(null)
 const stations = ref([])
 let map = null
 let markersLayer = null
+let userMarker = null
 let moveTimeout = null
 
 const fuelTypes = [
@@ -24,6 +28,9 @@ const fuelTypes = [
   { key: '95', label: 'АИ-95' },
   { key: 'diesel', label: 'ДТ' }
 ]
+
+const defaultCenter = [55.7558, 37.6173]
+const defaultZoom = 13
 
 function getFuelCounts(counts, fuel) {
   return counts && counts[fuel] ? counts[fuel] : { yes: 0, no: 0 }
@@ -153,8 +160,51 @@ async function vote(station, fuel, type) {
   }
 }
 
-onMounted(() => {
-  map = L.map(mapRef.value).setView([55.7558, 37.6173], 13)
+function showUserPosition(lat, lng) {
+  if (userMarker) {
+    map.removeLayer(userMarker)
+  }
+  userMarker = L.circleMarker([lat, lng], {
+    radius: 8,
+    fillColor: '#2563eb',
+    color: '#fff',
+    weight: 2,
+    opacity: 1,
+    fillOpacity: 0.9
+  }).addTo(map)
+  userMarker.bindPopup('Вы здесь')
+}
+
+function setMapView(lat, lng, zoom) {
+  map.setView([lat, lng], zoom)
+  showUserPosition(lat, lng)
+  loadStations()
+}
+
+function locateMe() {
+  if (!('geolocation' in navigator)) {
+    alert('Геолокация не поддерживается вашим браузером')
+    return
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords
+      setMapView(latitude, longitude, 15)
+    },
+    (err) => {
+      console.warn('Геолокация недоступна:', err)
+      let msg = 'Не удалось определить местоположение.'
+      if (err.code === 1) msg = 'Доступ к геолокации запрещён. Разрешите доступ в настройках браузера.'
+      if (err.code === 2) msg = 'Местоположение не определено.'
+      if (err.code === 3) msg = 'Время ожидания геолокации истекло.'
+      alert(msg)
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  )
+}
+
+function initMap(lat, lng, zoom) {
+  map = L.map(mapRef.value).setView([lat, lng], zoom)
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
@@ -163,24 +213,30 @@ onMounted(() => {
 
   markersLayer = L.layerGroup().addTo(map)
 
-  loadStations()
-
   map.on('moveend', () => {
     clearTimeout(moveTimeout)
     moveTimeout = setTimeout(loadStations, 300)
   })
 
+  showUserPosition(lat, lng)
+  loadStations()
+}
+
+onMounted(() => {
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords
-        map.setView([latitude, longitude], 14)
-        loadStations()
+        initMap(latitude, longitude, 14)
       },
       (err) => {
         console.warn('Геолокация недоступна:', err)
-      }
+        initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     )
+  } else {
+    initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
   }
 })
 
@@ -224,6 +280,33 @@ onUnmounted(() => {
   margin: 0;
   font-size: 13px;
   color: #555;
+}
+
+.locate-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.locate-btn:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.locate-btn:active {
+  transform: scale(0.95);
 }
 </style>
 

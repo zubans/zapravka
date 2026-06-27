@@ -1,16 +1,33 @@
-2026/06/27 12:12:18 Server listening on :8081
-2026/06/27 12:36:43 fetch stations error: overpass status 429: <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-  <meta http-equiv="content-type" content="text/html; charset=utf-8" lang="en"/>
-  <title>OSM3S Response</title>
-</head>
-<body>
-
-<p>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</p>
-<p><strong style="color:#FF0000">Error</strong>: runtime error: open64: 0 Success /osm3s_osm_base Dispatcher_Client::request_read_and_idx::rate_limited. Please check /api/status for the quota of your IP address. </p>
-
-</body>
-</html>
+2026/06/27 12:57:06 Server listening on :8081
+2026/06/27 12:57:23 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A3000%2C55.755800%2C37.617300%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:19 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.755800%2C37.617300%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:36 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.755800%2C37.617300%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:40 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.755800%2C37.617300%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:48 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.755762%2C37.617273%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:52 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.755762%2C37.617359%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:56 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.777683%2C37.627659%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:57 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.720391%2C37.628860%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:01:58 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.709271%2C37.654953%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:01 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.685424%2C37.663193%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:01 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.637492%2C37.679672%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:04 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.350232%2C37.779236%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:07 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C54.966578%2C37.913818%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:08 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.671389%2C33.925781%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:09 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C54.781682%2C39.770508%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:11 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.282535%2C37.177734%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:14 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C52.296722%2C39.006958%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:15 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.350232%2C37.779236%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:18 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C52.452662%2C40.341797%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:19 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.664890%2C39.550781%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:20 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C55.671389%2C33.925781%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:23 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.648916%2C39.350967%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:24 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.648916%2C39.302216%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:26 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.624624%2C39.247284%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:28 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.642045%2C39.219990%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:30 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.660577%2C39.218445%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:32 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.667498%2C39.211578%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:34 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.671171%2C39.242134%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:36 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.683732%2C39.195786%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:42 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.667498%2C39.211578%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:48 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.683732%2C39.195614%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2026/06/27 13:02:50 fetch stations error: Get "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5B%22amenity%22%3D%22fuel%22%5D%28around%3A5000%2C51.683732%2C39.195786%29%3Bout%3B": context deadline exceeded (Client.Timeout exceeded while awaiting headers)

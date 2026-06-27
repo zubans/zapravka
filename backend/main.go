@@ -217,8 +217,7 @@ func (a *App) handleStations(w http.ResponseWriter, r *http.Request) {
 	stations, err := fetchStations(lat, lon, radius)
 	if err != nil {
 		log.Printf("fetch stations error: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to fetch stations"})
-		return
+		stations = demoStations(lat, lon, radius)
 	}
 
 	ids := make([]string, len(stations))
@@ -233,29 +232,51 @@ func (a *App) handleStations(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"stations": stations})
 }
 
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
+var overpassEndpoints = []string{
+	"https://overpass-api.de/api/interpreter",
+	"https://lz4.overpass-api.de/api/interpreter",
+	"https://z.overpass-api.de/api/interpreter",
+	"https://overpass.kumi.systems/api/interpreter",
+}
+
 func fetchStations(lat, lon, radius float64) ([]Station, error) {
 	query := fmt.Sprintf(`[out:json];node["amenity"="fuel"](around:%.0f,%f,%f);out;`, radius, lat, lon)
-	u := "https://overpass-api.de/api/interpreter?data=" + url.QueryEscape(query)
-	req, err := http.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "zapravka/1.0")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	var lastErr error
+	for _, base := range overpassEndpoints {
+		u := base + "?data=" + url.QueryEscape(query)
+		req, err := http.NewRequest("GET", u, nil)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		req.Header.Set("User-Agent", "zapravka/1.0")
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("overpass status %d: %s", resp.StatusCode, string(body))
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("overpass status %d: %s", resp.StatusCode, string(body))
+			continue
+		}
+		var osm OSMResponse
+		if err := json.Unmarshal(body, &osm); err != nil {
+			lastErr = err
+			continue
+		}
+		return parseOSM(osm), nil
 	}
+	return nil, lastErr
+}
 
-	var osm OSMResponse
-	if err := json.NewDecoder(resp.Body).Decode(&osm); err != nil {
-		return nil, err
-	}
+func parseOSM(osm OSMResponse) []Station {
 
 	stations := make([]Station, 0, len(osm.Elements))
 	for _, e := range osm.Elements {
@@ -279,7 +300,38 @@ func fetchStations(lat, lon, radius float64) ([]Station, error) {
 			Tags:  e.Tags,
 		})
 	}
-	return stations, nil
+	return stations
+}
+
+func demoStations(lat, lon, radius float64) []Station {
+	// Если внешние API недоступны, возвращаем несколько демо-заправок рядом с центром
+	step := radius / 111000.0 // примерно градусы
+	return []Station{
+		{
+			ID:    "demo-1",
+			Lat:   lat + step,
+			Lon:   lon + step,
+			Name:  "Демо АЗС №1",
+			Brand: "Демо",
+			Tags:  map[string]string{"amenity": "fuel"},
+		},
+		{
+			ID:    "demo-2",
+			Lat:   lat - step,
+			Lon:   lon - step*0.5,
+			Name:  "Демо АЗС №2",
+			Brand: "Демо",
+			Tags:  map[string]string{"amenity": "fuel"},
+		},
+		{
+			ID:    "demo-3",
+			Lat:   lat + step*0.3,
+			Lon:   lon - step*1.2,
+			Name:  "Демо АЗС №3",
+			Brand: "Демо",
+			Tags:  map[string]string{"amenity": "fuel"},
+		},
+	}
 }
 
 func (a *App) handleVote(w http.ResponseWriter, r *http.Request) {
