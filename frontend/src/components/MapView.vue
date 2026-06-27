@@ -37,7 +37,8 @@ import {
   clearOldStations,
   saveQueryCoverage,
   isCoveredByCache,
-  clearOldQueries
+  clearOldQueries,
+  deleteDemoStations
 } from '../services/cache.js'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
@@ -51,6 +52,7 @@ let map = null
 let markersLayer = null
 let userMarker = null
 let moveTimeout = null
+let countsTimeout = null
 
 const COUNTS_CACHE_TTL_MS = 30 * 1000
 const countsCache = new Map() // id -> { counts, ts }
@@ -185,15 +187,18 @@ function toRad(x) {
   return (x * Math.PI) / 180
 }
 
-async function mergeVoteCounts() {
-  if (!stations.value.length) return
+async function mergeVoteCountsForIds(ids) {
+  if (!ids || ids.length === 0) return
   try {
     const now = Date.now()
     const idsToFetch = []
-    for (const s of stations.value) {
-      const cached = countsCache.get(s.id)
+    for (const id of ids) {
+      if (String(id).startsWith('demo-') || String(id).startsWith('test-')) {
+        continue
+      }
+      const cached = countsCache.get(id)
       if (!cached || now - cached.ts > COUNTS_CACHE_TTL_MS) {
-        idsToFetch.push(s.id)
+        idsToFetch.push(id)
       }
     }
 
@@ -204,16 +209,40 @@ async function mergeVoteCounts() {
       }
     }
 
+    let updated = false
     for (const s of stations.value) {
       const cached = countsCache.get(s.id)
-      if (cached) {
+      if (cached && JSON.stringify(s.counts) !== JSON.stringify(cached.counts)) {
         s.counts = cached.counts
+        updated = true
       }
     }
-    renderMarkers()
+    if (updated) renderMarkers()
   } catch (err) {
     console.error('Ошибка загрузки голосов:', err)
   }
+}
+
+function scheduleVoteCountsUpdate() {
+  clearTimeout(countsTimeout)
+  countsTimeout = setTimeout(updateVisibleVoteCounts, 200)
+}
+
+async function updateVisibleVoteCounts() {
+  if (!map || !markersLayer) return
+  const bounds = map.getBounds()
+  const ids = []
+  for (const layer of markersLayer.getLayers()) {
+    if (!layer.stationId) continue
+    if (String(layer.stationId).startsWith('demo-') || String(layer.stationId).startsWith('test-')) {
+      continue
+    }
+    if (bounds.contains(layer.getLatLng())) {
+      ids.push(layer.stationId)
+    }
+  }
+  if (!ids.length) return
+  await mergeVoteCountsForIds([...new Set(ids)])
 }
 
 async function loadStationsAround(lat, lon, radius, source = '') {
@@ -223,8 +252,8 @@ async function loadStationsAround(lat, lon, radius, source = '') {
     stations.value = cached
     renderMarkers()
 
-    // 2. Подгружаем актуальные голоса для отображаемых станций
-    await mergeVoteCounts()
+    // 2. Подгружаем актуальные голоса для видимых станций батчем
+    scheduleVoteCountsUpdate()
 
     // 3. Проверяем, покрывает ли кэш эту область (серверный запрос делали < 1 час назад)
     const covered = await isCoveredByCache(lat, lon, radius)
@@ -249,7 +278,7 @@ async function loadStationsAround(lat, lon, radius, source = '') {
           if (dx < 0.02 && dy < 0.02) {
             stations.value = fresh
             renderMarkers()
-            await mergeVoteCounts()
+            scheduleVoteCountsUpdate()
           }
         }
       }
@@ -296,6 +325,7 @@ async function vote(station, fuel, type) {
     if (!res.ok) throw new Error('vote failed')
     const data = await res.json()
     station.counts = data.counts
+    countsCache.set(station.id, { counts: data.counts, ts: Date.now() })
     renderMarkers()
   } catch (err) {
     console.error('Ошибка голосования:', err)
@@ -452,6 +482,13 @@ function initMap(lat, lng, zoom) {
 }
 
 onMounted(async () => {
+  // Удаляем старые демо-станции из локального кэша
+  try {
+    await deleteDemoStations()
+  } catch (e) {
+    console.warn('Не удалось удалить демо-станции:', e)
+  }
+
   const saved = loadSavedLocation()
   if (saved) {
     initMap(saved.lat, saved.lng, saved.zoom)

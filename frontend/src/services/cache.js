@@ -151,6 +151,28 @@ export async function isCoveredByCache(lat, lon, radiusMeters) {
   })
 }
 
+export async function deleteDemoStations() {
+  const db = await openDB()
+  const tx = db.transaction(STORE_NAME, 'readwrite')
+  const store = tx.objectStore(STORE_NAME)
+
+  return new Promise((resolve, reject) => {
+    const req = store.openCursor()
+    req.onerror = () => reject(req.error)
+    req.onsuccess = (event) => {
+      const cursor = event.target.result
+      if (!cursor) {
+        resolve()
+        return
+      }
+      if (String(cursor.value.id).startsWith('demo-') || String(cursor.value.id).startsWith('test-')) {
+        store.delete(cursor.primaryKey)
+      }
+      cursor.continue()
+    }
+  })
+}
+
 export async function clearOldQueries() {
   const db = await openDB()
   const tx = db.transaction(QUERY_STORE_NAME, 'readwrite')

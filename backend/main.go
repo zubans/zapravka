@@ -152,11 +152,17 @@ func (s *VoteStore) StartCleanup() {
 }
 
 type OSMElement struct {
-	Type string            `json:"type"`
-	ID   int64             `json:"id"`
-	Lat  float64           `json:"lat"`
-	Lon  float64           `json:"lon"`
-	Tags map[string]string `json:"tags"`
+	Type   string            `json:"type"`
+	ID     int64             `json:"id"`
+	Lat    float64           `json:"lat"`
+	Lon    float64           `json:"lon"`
+	Center *OSMCenter        `json:"center"`
+	Tags   map[string]string `json:"tags"`
+}
+
+type OSMCenter struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
 }
 
 type OSMResponse struct {
@@ -247,7 +253,13 @@ var overpassEndpoints = []string{
 }
 
 func fetchStations(lat, lon, radius float64) ([]Station, error) {
-	query := fmt.Sprintf(`[out:json];node["amenity"="fuel"](around:%.0f,%f,%f);out;`, radius, lat, lon)
+	query := fmt.Sprintf(`[out:json];
+(
+  node["amenity"="fuel"](around:%.0f,%f,%f);
+  way["amenity"="fuel"](around:%.0f,%f,%f);
+  relation["amenity"="fuel"](around:%.0f,%f,%f);
+);
+out center;`, radius, lat, lon, radius, lat, lon, radius, lat, lon)
 
 	var lastErr error
 	for _, base := range overpassEndpoints {
@@ -280,12 +292,29 @@ func fetchStations(lat, lon, radius float64) ([]Station, error) {
 }
 
 func parseOSM(osm OSMResponse) []Station {
-
 	stations := make([]Station, 0, len(osm.Elements))
+	seen := make(map[string]bool)
+
 	for _, e := range osm.Elements {
-		if e.Type != "node" {
+		var lat, lon float64
+		switch e.Type {
+		case "node":
+			lat, lon = e.Lat, e.Lon
+		case "way", "relation":
+			if e.Center == nil {
+				continue
+			}
+			lat, lon = e.Center.Lat, e.Center.Lon
+		default:
 			continue
 		}
+
+		id := fmt.Sprintf("%s%d", e.Type[:1], e.ID)
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+
 		name := e.Tags["name"]
 		if name == "" {
 			name = e.Tags["brand"]
@@ -293,11 +322,11 @@ func parseOSM(osm OSMResponse) []Station {
 		if name == "" {
 			name = "Заправка"
 		}
-		id := strconv.FormatInt(e.ID, 10)
+
 		stations = append(stations, Station{
 			ID:    id,
-			Lat:   e.Lat,
-			Lon:   e.Lon,
+			Lat:   lat,
+			Lon:   lon,
 			Name:  name,
 			Brand: e.Tags["brand"],
 			Tags:  e.Tags,
