@@ -174,6 +174,7 @@ type Station struct {
 
 type App struct {
 	store *VoteStore
+	cache *StationCache
 }
 
 func enableCORS(w http.ResponseWriter) {
@@ -215,9 +216,9 @@ func (a *App) handleStations(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	stations, err := fetchStations(lat, lon, radius)
+	stations, err := a.cache.GetStations(lat, lon, radius)
 	if err != nil {
-		log.Printf("fetch stations error: %v", err)
+		log.Printf("get stations error: %v", err)
 		stations = demoStations(lat, lon, radius)
 	}
 
@@ -386,7 +387,27 @@ func (a *App) handleVote(w http.ResponseWriter, r *http.Request) {
 func main() {
 	store := NewVoteStore()
 	store.StartCleanup()
-	app := &App{store: store}
+
+	cache, err := NewStationCache(cacheDBPath)
+	if err != nil {
+		log.Fatalf("failed to open station cache: %v", err)
+	}
+	defer cache.Close()
+
+	app := &App{store: store, cache: cache}
+
+	// Фоновое предзаполнение кэша для городов и трасс
+	app.startPreseed()
+
+	// Очистка устаревших записей раз в сутки
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			if err := cache.CleanupOld(); err != nil {
+				log.Printf("cache cleanup error: %v", err)
+			}
+		}
+	}()
 
 	http.HandleFunc("/api/stations", app.handleStations)
 	http.HandleFunc("/api/vote", app.handleVote)
