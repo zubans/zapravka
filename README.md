@@ -16,6 +16,8 @@ zapravka/
 │   ├── main.go
 │   └── go.mod
 ├── frontend/
+│   ├── .env              # переменные окружения (порт, URL backend)
+│   ├── .env.example      # пример переменных
 │   ├── index.html
 │   ├── package.json
 │   ├── vite.config.js
@@ -24,9 +26,9 @@ zapravka/
 │       ├── App.vue
 │       └── components/
 │           └── MapView.vue
-├── install.sh    # установка с нуля
-├── start.sh      # запуск
-├── stop.sh       # остановка
+├── install.sh            # установка с нуля
+├── start.sh              # запуск
+├── stop.sh               # остановка
 └── README.md
 ```
 
@@ -42,6 +44,28 @@ zapravka/
 - RHEL/CentOS (yum)
 - macOS (Homebrew)
 
+## Настройка портов
+
+Файл `frontend/.env`:
+
+```env
+VITE_PORT=80
+VITE_API_URL=http://localhost:8081
+```
+
+- `VITE_PORT` — порт frontend (по умолчанию `80`).
+- `VITE_API_URL` — URL backend для проксирования API.
+
+Backend настраивается переменными окружения:
+
+```bash
+HOST=0.0.0.0 PORT=8081 ./backend/zapravka
+```
+
+По умолчанию backend слушает `0.0.0.0:8081`, frontend — `0.0.0.0:80`.
+
+> **Важно:** порты ниже 1024 (например, 80) требуют root-прав на Linux/macOS. `install.sh` и `start.sh` на Linux должны запускаться от root.
+
 ## Запуск
 
 ```bash
@@ -49,23 +73,10 @@ zapravka/
 ./stop.sh    # останавливает их
 ```
 
-Или вручную:
-
-### Backend
+Или через systemd (после `./install.sh`):
 
 ```bash
-cd backend
-go run .
-# http://localhost:8081
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-# http://localhost:5173
+sudo systemctl enable --now zapravka
 ```
 
 ## API

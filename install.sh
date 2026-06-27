@@ -11,6 +11,11 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 OS=""
 ARCH="$(uname -m)"
 
+# Убедимся, что Go из /usr/local/go доступен внутри этого скрипта (например, при повторном запуске)
+if [ -x /usr/local/go/bin/go ]; then
+  export PATH="/usr/local/go/bin:$PATH"
+fi
+
 # Отключаем автообновление Homebrew, чтобы не трогать существующие пакеты
 export HOMEBREW_NO_AUTO_UPDATE=1
 
@@ -126,10 +131,18 @@ install_go() {
       tar -C /usr/local -xzf "${go_tarball}"
       rm -f "${go_tarball}"
 
+      export PATH="/usr/local/go/bin:$PATH"
       if ! grep -q "/usr/local/go/bin" /etc/profile 2>/dev/null; then
         echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
       fi
-      export PATH=$PATH:/usr/local/go/bin
+      # Для systemd и новых сессий: дописываем /usr/local/go/bin в PATH
+      if [ -f /etc/environment ] && grep -q '^PATH=' /etc/environment; then
+        if ! grep -q "/usr/local/go/bin" /etc/environment; then
+          sed -i 's|PATH="\([^"]*\)"|PATH="\1:/usr/local/go/bin"|' /etc/environment
+        fi
+      else
+        echo 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin"' >> /etc/environment
+      fi
       ;;
     macos)
       brew install go
@@ -172,6 +185,11 @@ install_node() {
 }
 
 install_project_deps() {
+  if [ ! -f "$ROOT/frontend/.env" ]; then
+    log "Creating frontend/.env from example..."
+    cp "$ROOT/frontend/.env.example" "$ROOT/frontend/.env"
+  fi
+
   log "Installing frontend dependencies..."
   cd "$ROOT/frontend"
   npm install
@@ -208,6 +226,7 @@ After=network.target
 [Service]
 Type=forking
 WorkingDirectory=$ROOT
+Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStart=$ROOT/start.sh
 ExecStop=$ROOT/stop.sh
 Restart=on-failure
@@ -223,10 +242,26 @@ EOF
 main() {
   log "Starting installation of Zapravka..."
   detect_os
+
+  if [[ "$OS" != "macos" && $EUID -ne 0 ]]; then
+    error "On Linux install.sh must be run as root or with sudo"
+    exit 1
+  fi
+
   install_base_deps
   install_go
   install_node
   install_project_deps
+
+  log "Verifying installation..."
+  if ! go version >/dev/null 2>&1; then
+    error "Go is not available after installation"
+    exit 1
+  fi
+  if ! node --version >/dev/null 2>&1 || ! npm --version >/dev/null 2>&1; then
+    error "Node.js/npm is not available after installation"
+    exit 1
+  fi
 
   if [[ $EUID -eq 0 ]] && check_command systemctl; then
     create_systemd_service
@@ -234,6 +269,7 @@ main() {
 
   log "Installation complete!"
   log "Run: $ROOT/start.sh"
+  log "Or:  sudo systemctl enable --now zapravka"
   log "Open: http://localhost:5173"
 }
 

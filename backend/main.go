@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -390,9 +391,17 @@ func main() {
 	http.HandleFunc("/api/stations", app.handleStations)
 	http.HandleFunc("/api/vote", app.handleVote)
 
-	port := ":8081"
-	log.Printf("Server listening on %s", port)
-	if err := http.ListenAndServe(port, nil); err != nil {
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081"
+	}
+	addr := host + ":" + port
+	log.Printf("Server listening on %s", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal(err)
 	}
 }
