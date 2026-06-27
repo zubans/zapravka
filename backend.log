@@ -1,31 +1,31 @@
-2026/06/27 20:09:26 Starting cache preseed...
-2026/06/27 20:09:26 Station cache path: /Users/sergeyzyuban/projects/zapravka/zapravka_cache.db, total stations: 2677
-2026/06/27 20:09:26 Server listening on 0.0.0.0:8081
-2026/06/27 20:09:26 Preseed area is fresh: Москва
-2026/06/27 20:09:26 Preseed area is fresh: Курск
-2026/06/27 20:09:26 Preseed area is fresh: Орёл
-2026/06/27 20:09:26 Preseed area is fresh: Воронеж
-2026/06/27 20:09:26 Preseed area is fresh: Ростов-на-Дону
-2026/06/27 20:09:26 Preseed area is fresh: Обоянь
-2026/06/27 20:09:26 Preseed area is fresh: Краснодар
-2026/06/27 20:09:26 Preseed area is fresh: Ставрополь
-2026/06/27 20:09:26 Preseed area is fresh: Черкесск
-2026/06/27 20:09:26 Preseed area is fresh: Краснодарский край (Анапа)
-2026/06/27 20:09:26 Preseed area is fresh: Краснодарский край (Сочи)
-2026/06/27 20:09:26 Preseed area is fresh: Краснодарский край (Новороссийск)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Москва-Видное)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Кашира)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Серпухов)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Тула)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Плавск)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Ефремов)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Курск)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Обоянь)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Строитель)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Воронеж)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Богучар)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Каменск-Шахтинский)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Ростов-на-Дону)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Аксай)
-2026/06/27 20:09:26 Preseed area is fresh: М4 Дон (Краснодар)
-2026/06/27 20:09:26 Preseed complete in 16.231916ms. Total cached stations: 2677
+2026/06/27 20:24:30 Starting cache preseed...
+2026/06/27 20:24:30 Station cache path: /Users/sergeyzyuban/projects/zapravka/zapravka_cache.db, total stations: 2677
+2026/06/27 20:24:30 Server listening on 0.0.0.0:8081
+2026/06/27 20:24:30 Preseed area is fresh: Москва
+2026/06/27 20:24:30 Preseed area is fresh: Курск
+2026/06/27 20:24:30 Preseed area is fresh: Орёл
+2026/06/27 20:24:30 Preseed area is fresh: Воронеж
+2026/06/27 20:24:30 Preseed area is fresh: Ростов-на-Дону
+2026/06/27 20:24:30 Preseed area is fresh: Обоянь
+2026/06/27 20:24:30 Preseed area is fresh: Краснодар
+2026/06/27 20:24:30 Preseed area is fresh: Ставрополь
+2026/06/27 20:24:30 Preseed area is fresh: Черкесск
+2026/06/27 20:24:30 Preseed area is fresh: Краснодарский край (Анапа)
+2026/06/27 20:24:30 Preseed area is fresh: Краснодарский край (Сочи)
+2026/06/27 20:24:30 Preseed area is fresh: Краснодарский край (Новороссийск)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Москва-Видное)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Кашира)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Серпухов)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Тула)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Плавск)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Ефремов)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Курск)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Обоянь)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Строитель)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Воронеж)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Богучар)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Каменск-Шахтинский)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Ростов-на-Дону)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Аксай)
+2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Краснодар)
+2026/06/27 20:24:30 Preseed complete in 15.508584ms. Total cached stations: 2677
