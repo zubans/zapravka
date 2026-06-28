@@ -3,26 +3,8 @@
 > vite
 
 
-  VITE v5.4.21  ready in 128 ms
+  VITE v5.4.21  ready in 159 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://192.168.1.59:5173/
-20:54:12 [vite] hmr update /src/components/MapView.vue
-20:54:19 [vite] hmr update /src/components/MapView.vue
-20:54:38 [vite] hmr update /src/components/MapView.vue
-20:54:46 [vite] hmr update /src/components/MapView.vue
-20:55:01 [vite] hmr update /src/components/MapView.vue
-20:55:25 [vite] hmr update /src/components/MapView.vue
-20:55:31 [vite] hmr update /src/components/MapView.vue
-20:55:36 [vite] hmr update /src/components/MapView.vue
-20:56:19 [vite] hmr update /src/components/MapView.vue
-20:56:29 [vite] hmr update /src/components/MapView.vue
-21:02:13 [vite] hmr update /src/components/MapView.vue
-21:02:19 [vite] hmr update /src/components/MapView.vue
-21:02:25 [vite] hmr update /src/components/MapView.vue
-21:02:32 [vite] hmr update /src/components/MapView.vue
-21:11:13 [vite] hmr update /src/components/MapView.vue
-21:11:29 [vite] hmr update /src/components/MapView.vue
-21:11:36 [vite] hmr update /src/components/MapView.vue
-21:11:42 [vite] hmr update /src/components/MapView.vue
-21:11:51 [vite] hmr update /src/components/MapView.vue
+7:41:24 PM [vite] hmr update /src/components/MapView.vue?vue&type=style&index=0&scoped=1b2abc32&lang.css, /src/components/MapView.vue

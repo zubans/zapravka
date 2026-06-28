@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       port,
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:8081',
+          target: (env.VITE_API_URL && env.VITE_API_URL.startsWith('http')) ? env.VITE_API_URL : 'http://localhost:8081',
           changeOrigin: true
         }
       }

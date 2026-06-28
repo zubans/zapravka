@@ -69,6 +69,15 @@ func initSchema(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_stations_lat ON stations(lat);
 		CREATE INDEX IF NOT EXISTS idx_stations_lon ON stations(lon);
 		CREATE INDEX IF NOT EXISTS idx_stations_fetched_at ON stations(fetched_at);
+
+		CREATE TABLE IF NOT EXISTS votes (
+			station_id TEXT NOT NULL,
+			fuel_type TEXT NOT NULL,
+			vote_type TEXT NOT NULL,
+			created_at INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_votes_station_id ON votes(station_id);
+		CREATE INDEX IF NOT EXISTS idx_votes_created_at ON votes(created_at);
 	`)
 	return err
 }
@@ -117,11 +126,16 @@ func (c *StationCache) GetInRadius(lat, lon, radius float64) ([]CachedStation, e
 	defer c.mu.RUnlock()
 
 	// bounding box для быстрой фильтрации (1 градус ≈ 111 км)
-	delta := radius / 111000.0
+	deltaLat := radius / 111000.0
+	cosLat := math.Cos(lat * math.Pi / 180.0)
+	if cosLat < 0.01 {
+		cosLat = 0.01
+	}
+	deltaLon := radius / (111000.0 * cosLat)
 	rows, err := c.db.Query(
 		`SELECT id, lat, lon, name, brand, tags, source, fetched_at FROM stations
 		 WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?`,
-		lat-delta, lat+delta, lon-delta, lon+delta,
+		lat-deltaLat, lat+deltaLat, lon-deltaLon, lon+deltaLon,
 	)
 	if err != nil {
 		return nil, err
@@ -244,3 +258,57 @@ func (c *StationCache) GetStations(lat, lon, radius float64) ([]Station, error) 
 	// Кэш отсутствует или устарел — запрашиваем из Overpass
 	return c.FetchAndCache(lat, lon, radius)
 }
+
+func (c *StationCache) SaveVote(stationID string, fuel string, voteType string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	_, err := c.db.Exec(`
+		INSERT INTO votes (station_id, fuel_type, vote_type, created_at)
+		VALUES (?, ?, ?, ?)
+	`, stationID, fuel, voteType, time.Now().Unix())
+	return err
+}
+
+func (c *StationCache) GetActiveVotes(ttl time.Duration) ([]Vote, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	cutoff := time.Now().Add(-ttl).Unix()
+	rows, err := c.db.Query(`
+		SELECT station_id, fuel_type, vote_type, created_at
+		FROM votes
+		WHERE created_at >= ?
+	`, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var votes []Vote
+	for rows.Next() {
+		var v Vote
+		var fuelStr string
+		var vtStr string
+		var createdAtUnix int64
+		err := rows.Scan(&v.StationID, &fuelStr, &vtStr, &createdAtUnix)
+		if err != nil {
+			continue
+		}
+		v.FuelType = FuelType(fuelStr)
+		v.Type = VoteType(vtStr)
+		v.CreatedAt = time.Unix(createdAtUnix, 0)
+		votes = append(votes, v)
+	}
+	return votes, rows.Err()
+}
+
+func (c *StationCache) DeleteExpiredVotes(ttl time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	cutoff := time.Now().Add(-ttl).Unix()
+	_, err := c.db.Exec("DELETE FROM votes WHERE created_at < ?", cutoff)
+	return err
+}
+

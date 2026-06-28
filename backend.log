@@ -1,31 +1,61 @@
-2026/06/27 20:24:30 Starting cache preseed...
-2026/06/27 20:24:30 Station cache path: /Users/sergeyzyuban/projects/zapravka/zapravka_cache.db, total stations: 2677
-2026/06/27 20:24:30 Server listening on 0.0.0.0:8081
-2026/06/27 20:24:30 Preseed area is fresh: Москва
-2026/06/27 20:24:30 Preseed area is fresh: Курск
-2026/06/27 20:24:30 Preseed area is fresh: Орёл
-2026/06/27 20:24:30 Preseed area is fresh: Воронеж
-2026/06/27 20:24:30 Preseed area is fresh: Ростов-на-Дону
-2026/06/27 20:24:30 Preseed area is fresh: Обоянь
-2026/06/27 20:24:30 Preseed area is fresh: Краснодар
-2026/06/27 20:24:30 Preseed area is fresh: Ставрополь
-2026/06/27 20:24:30 Preseed area is fresh: Черкесск
-2026/06/27 20:24:30 Preseed area is fresh: Краснодарский край (Анапа)
-2026/06/27 20:24:30 Preseed area is fresh: Краснодарский край (Сочи)
-2026/06/27 20:24:30 Preseed area is fresh: Краснодарский край (Новороссийск)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Москва-Видное)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Кашира)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Серпухов)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Тула)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Плавск)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Ефремов)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Курск)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Обоянь)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Строитель)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Воронеж)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Богучар)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Каменск-Шахтинский)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Ростов-на-Дону)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Аксай)
-2026/06/27 20:24:30 Preseed area is fresh: М4 Дон (Краснодар)
-2026/06/27 20:24:30 Preseed complete in 15.508584ms. Total cached stations: 2677
+2026/06/28 16:44:16 Loaded 1 active votes from SQLite cache
+2026/06/28 16:44:16 Starting cache preseed...
+2026/06/28 16:44:16 Station cache path: /Users/sergeyzyuban/projects/zapravka/zapravka_cache.db, total stations: 3281
+2026/06/28 16:44:16 Server listening on 0.0.0.0:8081
+2026/06/28 16:44:16 Preseed area is fresh: Москва
+2026/06/28 16:44:16 Preseed area is fresh: Видное
+2026/06/28 16:44:16 Preseed area is fresh: Домодедово
+2026/06/28 16:44:16 Preseed area is fresh: Ступино
+2026/06/28 16:44:16 Preseed area is fresh: Кашира
+2026/06/28 16:44:16 Preseed area is fresh: Алексин
+2026/06/28 16:44:16 Preseed area is fresh: Тула
+2026/06/28 16:44:16 Preseed area is fresh: Щекино
+2026/06/28 16:44:16 Preseed area is fresh: Плавск
+2026/06/28 16:44:16 Preseed area is fresh: Богородицк
+2026/06/28 16:44:16 Preseed area is fresh: Ефремов
+2026/06/28 16:44:16 Preseed area is fresh: Елец
+2026/06/28 16:44:16 Preseed area is fresh: Задонск
+2026/06/28 16:44:16 Preseed area is fresh: Липецк
+2026/06/28 16:44:16 Preseed area is fresh: Хлевное
+2026/06/28 16:44:16 Preseed area is fresh: Конь-Колодезь
+2026/06/28 16:44:16 Preseed area is fresh: Павловск
+2026/06/28 16:44:16 Preseed area is fresh: Семилуки
+2026/06/28 16:44:16 Preseed area is fresh: Воронеж
+2026/06/28 16:44:16 Preseed area is fresh: Новая Усмань
+2026/06/28 16:44:16 Preseed area is fresh: Лосево
+2026/06/28 16:44:16 Preseed area is fresh: Панино
+2026/06/28 16:44:16 Preseed area is fresh: Богучар
+2026/06/28 16:44:16 Preseed area is fresh: Миллерово
+2026/06/28 16:44:16 Preseed area is fresh: Каменск-Шахтинский
+2026/06/28 16:44:16 Preseed area is fresh: Шахты
+2026/06/28 16:44:16 Preseed area is fresh: Новошахтинск
+2026/06/28 16:44:16 Preseed area is fresh: Ростов-на-Дону
+2026/06/28 16:44:16 Preseed area is fresh: Аксай
+2026/06/28 16:44:16 Preseed area is fresh: Батайск
+2026/06/28 16:44:16 Preseed area is fresh: Краснодар
+2026/06/28 16:44:16 Preseed area is fresh: Усть-Лабинск
+2026/06/28 16:44:16 Preseed area is fresh: Армавир
+2026/06/28 16:44:16 Preseed area is fresh: Лабинск
+2026/06/28 16:44:16 Preseed area is fresh: Курганинск
+2026/06/28 16:44:16 Preseed area is fresh: Апшеронск
+2026/06/28 16:44:16 Preseed area is fresh: Майкоп
+2026/06/28 16:44:16 Preseed area is fresh: Белореченск
+2026/06/28 16:44:16 Preseed area is fresh: Джубга
+2026/06/28 16:44:16 Preseed area is fresh: Туапсе
+2026/06/28 16:44:16 Preseed area is fresh: Сочи
+2026/06/28 16:44:16 Preseed area is fresh: Адлер
+2026/06/28 16:44:16 Preseed area is fresh: Минеральные Воды
+2026/06/28 16:44:16 Preseed area is fresh: Пятигорск
+2026/06/28 16:44:16 Preseed area is fresh: Ессентуки
+2026/06/28 16:44:16 Preseed area is fresh: Железноводск
+2026/06/28 16:44:16 Preseed area is fresh: Кисловодск
+2026/06/28 16:44:16 Preseed area is fresh: Лермонтов
+2026/06/28 16:44:16 Preseed area is fresh: Невинномысск
+2026/06/28 16:44:16 Preseed area is fresh: Курск
+2026/06/28 16:44:16 Preseed area is fresh: Орёл
+2026/06/28 16:44:16 Preseed area is fresh: Обоянь
+2026/06/28 16:44:16 Preseed area is fresh: Ставрополь
+2026/06/28 16:44:16 Preseed area is fresh: Черкесск
+2026/06/28 16:44:16 Preseed area is fresh: Анапа
+2026/06/28 16:44:16 Preseed area is fresh: Новороссийск
+2026/06/28 16:44:16 Preseed complete in 42.732584ms. Total cached stations: 3281

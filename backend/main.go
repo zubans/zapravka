@@ -58,12 +58,26 @@ type StationCounts map[FuelType]VoteCounts
 type VoteStore struct {
 	mu    sync.RWMutex
 	votes map[string][]Vote // station id -> votes
+	cache *StationCache
 }
 
-func NewVoteStore() *VoteStore {
-	return &VoteStore{
+func NewVoteStore(cache *StationCache) *VoteStore {
+	store := &VoteStore{
 		votes: make(map[string][]Vote),
+		cache: cache,
 	}
+	if cache != nil {
+		activeVotes, err := cache.GetActiveVotes(voteTTL)
+		if err != nil {
+			log.Printf("failed to load active votes from cache: %v", err)
+		} else {
+			for _, v := range activeVotes {
+				store.votes[v.StationID] = append(store.votes[v.StationID], v)
+			}
+			log.Printf("Loaded %d active votes from SQLite cache", len(activeVotes))
+		}
+	}
+	return store
 }
 
 func (s *VoteStore) Add(stationID string, fuel FuelType, vt VoteType) {
@@ -75,6 +89,14 @@ func (s *VoteStore) Add(stationID string, fuel FuelType, vt VoteType) {
 		Type:      vt,
 		CreatedAt: time.Now(),
 	})
+
+	if s.cache != nil {
+		go func() {
+			if err := s.cache.SaveVote(stationID, string(fuel), string(vt)); err != nil {
+				log.Printf("failed to save vote to SQLite: %v", err)
+			}
+		}()
+	}
 }
 
 func (s *VoteStore) Counts(stationID string) StationCounts {
@@ -138,6 +160,12 @@ func (s *VoteStore) Cleanup() {
 			delete(s.votes, sid)
 		} else {
 			s.votes[sid] = newList
+		}
+	}
+
+	if s.cache != nil {
+		if err := s.cache.DeleteExpiredVotes(voteTTL); err != nil {
+			log.Printf("failed to delete expired votes from SQLite: %v", err)
 		}
 	}
 }
@@ -462,7 +490,7 @@ func main() {
 		return
 	}
 
-	store := NewVoteStore()
+	store := NewVoteStore(cache)
 	store.StartCleanup()
 
 	app := &App{store: store, cache: cache}

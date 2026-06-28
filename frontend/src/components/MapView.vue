@@ -1,29 +1,72 @@
 <template>
   <div class="map-container">
+    <!-- Map Canvas -->
     <div ref="mapRef" class="map"></div>
-    <div class="info">
-      <h1>Карта заправок</h1>
-      <p>Нажмите на заправку, чтобы сообщить о наличии топлива.</p>
-      <div class="search-box">
-        <input
-          v-model="address"
-          type="text"
-          placeholder="Введите город или адрес"
-          @keyup.enter="searchAddress"
-        />
-        <button @click="searchAddress">Найти</button>
-      </div>
-      <p v-if="locationStatus" class="status">{{ locationStatus }}</p>
-      <button v-if="showRetryGeo" class="retry-btn" @click="requestGeoPermission">
-        🔄 Запросить геолокацию
+
+    <!-- Modern Sidebar / Bottom Sheet -->
+    <div :class="['panel', { 'collapsed': isCollapsed }]">
+      <!-- Drag Handle for Mobile & Toggle Button for Desktop -->
+      <button class="toggle-btn" @click="toggleCollapse" aria-label="Свернуть/Развернуть панель">
+        <span class="handle-bar"></span>
+        <svg class="arrow-icon" viewBox="0 0 24 24" width="16" height="16">
+          <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+        </svg>
       </button>
-      <p v-if="!isSecure" class="secure-hint">
-        Для точной геолокации откройте сайт по HTTPS. Сейчас используется поиск по адресу или геолокация по IP.
-      </p>
+
+      <div class="panel-content">
+        <header class="app-header">
+          <h1><span class="icon-brand">⛽</span> Карта заправок</h1>
+          <p>Мониторинг наличия топлива на АЗС</p>
+        </header>
+
+        <!-- Search input box -->
+        <div class="search-box">
+          <div class="input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              v-model="address"
+              type="text"
+              placeholder="Введите город или адрес"
+              @keyup.enter="searchAddress"
+            />
+          </div>
+          <button class="search-btn" @click="searchAddress">Найти</button>
+        </div>
+
+        <!-- Location status indicator -->
+        <div class="status-section">
+          <div v-if="locationStatus" class="status-msg">
+            <span class="pulse-dot"></span>
+            <span class="status-text">{{ locationStatus }}</span>
+          </div>
+          <button v-if="showRetryGeo" class="retry-btn" @click="requestGeoPermission">
+            🔄 Запросить геолокацию
+          </button>
+          <div v-if="!isSecure" class="secure-hint">
+            💡 Откройте сайт по HTTPS для точного определения геолокации.
+          </div>
+        </div>
+
+        <div class="info-footer">
+          <p>Нажмите на маркер заправки на карте, чтобы узнать подробности или проголосовать.</p>
+        </div>
+      </div>
     </div>
-    <button class="locate-btn" @click="locateMe" title="Моё местоположение">
-      📍
-    </button>
+
+    <!-- Floating Action Buttons -->
+    <div class="fab-container">
+      <button class="locate-btn" @click="locateMe" title="Моё местоположение">
+        🎯
+      </button>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <Transition name="toast">
+      <div v-if="toast.visible" :class="['toast', `toast-${toast.type}`]">
+        <span class="toast-icon">{{ toast.type === 'success' ? '✅' : '⚠️' }}</span>
+        <span class="toast-message">{{ toast.message }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -48,6 +91,23 @@ const address = ref('')
 const locationStatus = ref('')
 const showRetryGeo = ref(false)
 const isSecure = ref(typeof window !== 'undefined' ? window.isSecureContext : false)
+const isCollapsed = ref(false)
+
+const toast = ref({ message: '', type: 'success', visible: false })
+let toastTimeout = null
+
+function showToast(message, type = 'success') {
+  clearTimeout(toastTimeout)
+  toast.value = { message, type, visible: true }
+  toastTimeout = setTimeout(() => {
+    toast.value.visible = false
+  }, 3500)
+}
+
+function toggleCollapse() {
+  isCollapsed.value = !isCollapsed.value
+}
+
 let map = null
 let markersLayer = null
 let userMarker = null
@@ -92,9 +152,22 @@ function createStationIcon(counts) {
         <span class="no">${t.no}</span>
        </div>`
     : ''
+
+  let statusClass = ''
+  if (t.yes > 0) {
+    statusClass = 'has-fuel'
+  } else if (t.no > 0) {
+    statusClass = 'no-fuel'
+  }
+
   return L.divIcon({
     className: 'station-marker',
-    html: `<div class="station-pin">⛽</div>${badge}`,
+    html: `
+      <div class="station-pin-wrapper ${statusClass}">
+        <div class="station-pin"><span class="pin-icon">⛽</span></div>
+        ${badge}
+      </div>
+    `,
     iconSize: [40, 50],
     iconAnchor: [20, 50],
     popupAnchor: [0, -45]
@@ -113,22 +186,32 @@ function createPopupContent(station) {
         <div class="fuel-info">
           <span class="fuel-name">${fuel.label}</span>
           <span class="fuel-counts">
-            <span class="yes">есть ${c.yes}</span>
+            <span class="yes">Есть ${c.yes}</span>
             <span class="sep">/</span>
-            <span class="no">нет ${c.no}</span>
+            <span class="no">Нет ${c.no}</span>
           </span>
         </div>
         <div class="fuel-buttons">
-          <button class="btn-yes" data-fuel="${fuel.key}" data-type="yes">✅</button>
-          <button class="btn-no" data-fuel="${fuel.key}" data-type="no">❌</button>
+          <button class="btn-yes" data-fuel="${fuel.key}" data-type="yes" title="Топливо есть">
+            <svg class="vote-icon" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+          </button>
+          <button class="btn-no" data-fuel="${fuel.key}" data-type="no" title="Топлива нет">
+            <svg class="vote-icon" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+            </svg>
+          </button>
         </div>
       </div>
     `
   }
 
   div.innerHTML = `
-    <h3>${escapeHtml(station.name)}</h3>
-    <p>${station.brand ? escapeHtml(station.brand) : 'Заправка'}</p>
+    <div class="popup-title-bar">
+      <h3>${escapeHtml(station.name)}</h3>
+      <span class="popup-brand">${station.brand ? escapeHtml(station.brand) : 'Независимая АЗС'}</span>
+    </div>
     <div class="fuel-list">
       ${fuelRows}
     </div>
@@ -175,7 +258,6 @@ function getVisibleRadius() {
   const center = bounds.getCenter()
   const ne = bounds.getNorthEast()
   const sw = bounds.getSouthWest()
-  // половина диагонали видимой области
   const dLat = toRad(ne.lat - sw.lat)
   const dLon = toRad(ne.lng - sw.lng) * Math.cos(toRad(center.lat))
   const a = Math.sin(dLat / 2) ** 2 + Math.sin(dLon / 2) ** 2
@@ -210,14 +292,24 @@ async function mergeVoteCountsForIds(ids) {
     }
 
     let updated = false
+    const stationsToSave = []
     for (const s of stations.value) {
       const cached = countsCache.get(s.id)
       if (cached && JSON.stringify(s.counts) !== JSON.stringify(cached.counts)) {
         s.counts = cached.counts
         updated = true
+        stationsToSave.push(s)
       }
     }
-    if (updated) renderMarkers()
+    if (updated) {
+      renderMarkers()
+      // Persist the updated counts back into IndexedDB so they don't reset to 0 next time
+      try {
+        await saveStations(stationsToSave)
+      } catch (err) {
+        console.warn('Не удалось обновить голоса в локальном кэше IndexedDB:', err)
+      }
+    }
   } catch (err) {
     console.error('Ошибка загрузки голосов:', err)
   }
@@ -247,22 +339,21 @@ async function updateVisibleVoteCounts() {
 
 async function loadStationsAround(lat, lon, radius, source = '') {
   try {
-    // 1. Всегда сначала показываем кэшированные заправки для этой области
+    // 1. Сначала показываем локально кэшированные заправки из IndexedDB
     const cached = await getCachedStations(lat, lon, radius)
     stations.value = cached
     renderMarkers()
 
-    // 2. Подгружаем актуальные голоса для видимых станций батчем
+    // 2. Сразу подтягиваем свежие голоса для видимых заправок
     scheduleVoteCountsUpdate()
 
-    // 3. Проверяем, покрывает ли кэш эту область (серверный запрос делали < 1 час назад)
+    // 3. Проверяем, покрывает ли кэш поисковых запросов текущую область
     const covered = await isCoveredByCache(lat, lon, radius)
 
     if (!covered) {
-      // 4. Если области нет в кэше — запрашиваем станции с сервера
+      // 4. Если нет покрытия — качаем свежие станции с бэкенда
       const fresh = await fetchStationsFromAPI(lat, lon, radius)
 
-      // Сохраняем покрытие даже для пустого ответа, чтобы не долбить сервер
       await saveQueryCoverage(lat, lon, radius)
       await clearOldQueries()
 
@@ -270,7 +361,6 @@ async function loadStationsAround(lat, lon, radius, source = '') {
         await saveStations(fresh)
         await clearOldStations()
 
-        // Обновляем маркеры, если центр карты всё ещё рядом с запрошенной точкой
         if (map) {
           const center = map.getCenter()
           const dx = Math.abs(center.lat - lat)
@@ -285,12 +375,12 @@ async function loadStationsAround(lat, lon, radius, source = '') {
     }
 
     if (source) {
-      locationStatus.value = `Заправок в области: ${stations.value.length}`
+      locationStatus.value = `Найдено заправок: ${stations.value.length}`
     }
   } catch (err) {
     console.error('Ошибка загрузки заправок:', err)
     if (!stations.value.length) {
-      locationStatus.value = 'Не удалось загрузить заправки. Проверьте подключение.'
+      locationStatus.value = 'Ошибка загрузки данных. Проверьте интернет.'
     }
   }
 }
@@ -327,9 +417,18 @@ async function vote(station, fuel, type) {
     station.counts = data.counts
     countsCache.set(station.id, { counts: data.counts, ts: Date.now() })
     renderMarkers()
+    
+    // Save to IndexedDB so counts are persisted locally
+    try {
+      await saveStations([station])
+    } catch (e) {
+      console.warn('Не удалось обновить голос в IndexedDB:', e)
+    }
+
+    showToast('Ваш голос успешно учтен!')
   } catch (err) {
     console.error('Ошибка голосования:', err)
-    alert('Не удалось сохранить голос. Попробуйте позже.')
+    showToast('Не удалось отправить голос. Попробуйте позже.', 'error')
   }
 }
 
@@ -338,12 +437,12 @@ function showUserPosition(lat, lng) {
     map.removeLayer(userMarker)
   }
   userMarker = L.circleMarker([lat, lng], {
-    radius: 8,
-    fillColor: '#2563eb',
-    color: '#fff',
-    weight: 2,
+    radius: 9,
+    fillColor: '#3b82f6',
+    color: '#ffffff',
+    weight: 3,
     opacity: 1,
-    fillOpacity: 0.9
+    fillOpacity: 0.95
   }).addTo(map)
   userMarker.bindPopup('Вы здесь')
 }
@@ -382,7 +481,7 @@ async function searchAddress() {
   const q = address.value.trim()
   if (!q) return
 
-  locationStatus.value = 'Поиск...'
+  locationStatus.value = 'Ищем на карте...'
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
@@ -398,6 +497,11 @@ async function searchAddress() {
     const lat = parseFloat(place.lat)
     const lon = parseFloat(place.lon)
     await setMapView(lat, lon, 15, place.display_name)
+    
+    // Auto-collapse panel on mobile after selection to show the map
+    if (window.innerWidth < 768) {
+      isCollapsed.value = true
+    }
   } catch (err) {
     console.error('Ошибка геокодирования:', err)
     locationStatus.value = 'Не удалось найти адрес'
@@ -405,13 +509,13 @@ async function searchAddress() {
 }
 
 async function locateByIP() {
-  locationStatus.value = 'Определение по IP...'
+  locationStatus.value = 'Определение координат...'
   try {
     const res = await fetch('https://ipapi.co/json/')
     if (!res.ok) throw new Error('ip location failed')
     const data = await res.json()
     if (data.latitude && data.longitude) {
-      await setMapView(data.latitude, data.longitude, 12, `примерное местоположение (${data.city || 'по IP'})`)
+      await setMapView(data.latitude, data.longitude, 12, `местоположение по IP (${data.city || ''})`)
       return true
     }
   } catch (err) {
@@ -425,25 +529,25 @@ function handleGeoError(err) {
   showRetryGeo.value = true
 
   if (!isSecure.value) {
-    locationStatus.value = 'Геолокация недоступна по HTTP. Используйте HTTPS или поиск по адресу.'
+    locationStatus.value = 'Геолокация не поддерживается без HTTPS. Используйте поиск.'
     return
   }
 
-  let msg = 'Не удалось определить местоположение'
-  if (err && err.code === 1) msg = 'Доступ к геолокации запрещён. Нажмите «Запросить геолокацию» или разрешите доступ в настройках браузера'
-  if (err && err.code === 2) msg = 'Местоположение не определено'
-  if (err && err.code === 3) msg = 'Время ожидания истекло'
-  locationStatus.value = `${msg}.`
+  let msg = 'Не удалось определить координаты'
+  if (err && err.code === 1) msg = 'Доступ к геопозиции отклонен. Разрешите его в браузере'
+  if (err && err.code === 2) msg = 'Не удалось получить спутниковый сигнал'
+  if (err && err.code === 3) msg = 'Превышено время ожидания GPS'
+  locationStatus.value = msg
 }
 
 function requestGeoPermission() {
   if (!('geolocation' in navigator)) {
-    locationStatus.value = 'Геолокация не поддерживается браузером'
+    locationStatus.value = 'Геолокация не поддерживается вашим браузером'
     showRetryGeo.value = false
     return
   }
   showRetryGeo.value = false
-  locationStatus.value = 'Запрос разрешения на геолокацию...'
+  locationStatus.value = 'Получаем GPS координаты...'
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude, longitude } = pos.coords
@@ -462,9 +566,15 @@ function locateMe() {
 }
 
 function initMap(lat, lng, zoom) {
-  map = L.map(mapRef.value).setView([lat, lng], zoom)
+  map = L.map(mapRef.value, {
+    zoomControl: false // Hide default to place custom ones later
+  }).setView([lat, lng], zoom)
 
-  // Оффлайн-кэширование тайлов карты
+  // Custom Zoom Control positioning (bottom-right above locate btn)
+  L.control.zoom({
+    position: 'bottomright'
+  }).addTo(map)
+
   tileLayerOffline('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19,
@@ -482,29 +592,28 @@ function initMap(lat, lng, zoom) {
 }
 
 onMounted(async () => {
-  // Удаляем старые демо-станции из локального кэша
   try {
     await deleteDemoStations()
   } catch (e) {
-    console.warn('Не удалось удалить демо-станции:', e)
+    console.warn('Не удалось очистить демо-станции:', e)
   }
 
   const saved = loadSavedLocation()
   if (saved) {
     initMap(saved.lat, saved.lng, saved.zoom)
-    locationStatus.value = 'Загрузка заправок в радиусе 20 км...'
+    locationStatus.value = 'Загрузка сохраненного местоположения...'
     await loadStationsAround(saved.lat, saved.lng, PRELOAD_RADIUS, 'сохранённое местоположение')
     return
   }
 
   if ('geolocation' in navigator) {
-    locationStatus.value = 'Определение местоположения...'
+    locationStatus.value = 'Определяем геопозицию...'
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords
         initMap(latitude, longitude, 14)
         saveLocation(latitude, longitude, 14)
-        locationStatus.value = 'Загрузка заправок в радиусе 20 км...'
+        locationStatus.value = 'Загрузка заправок вокруг...'
         await loadStationsAround(latitude, longitude, PRELOAD_RADIUS, 'моё местоположение')
       },
       async (err) => {
@@ -513,19 +622,19 @@ onMounted(async () => {
         if (!ok) {
           initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
           await loadStationsAround(defaultCenter[0], defaultCenter[1], PRELOAD_RADIUS, 'Москва (по умолчанию)')
-          if (!locationStatus.value.includes('HTTP')) {
-            locationStatus.value = 'Геолокация недоступна. Показаны заправки в Москве. Используйте поиск.'
+          if (!locationStatus.value.includes('HTTPS')) {
+            locationStatus.value = 'Геолокация недоступна. Показана Москва.'
           }
         }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     )
   } else {
     const ok = await locateByIP()
     if (!ok) {
       initMap(defaultCenter[0], defaultCenter[1], defaultZoom)
       await loadStationsAround(defaultCenter[0], defaultCenter[1], PRELOAD_RADIUS, 'Москва (по умолчанию)')
-      locationStatus.value = 'Геолокация недоступна. Показаны заправки в Москве. Используйте поиск.'
+      locationStatus.value = 'Геолокация не поддерживается. Показана Москва.'
     }
   }
 })
@@ -538,277 +647,708 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Rubik:wght@300;400;500;600;700&display=swap');
+
 .map-container {
   position: relative;
   width: 100%;
   height: 100%;
+  font-family: 'Rubik', 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --border-glass: rgba(255, 255, 255, 0.4);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
 }
 
 .map {
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
-.info {
+/* Glassmorphic Panel Design */
+.panel {
   position: absolute;
-  top: 12px;
-  left: 50px;
+  top: 20px;
+  left: 20px;
+  width: 360px;
+  max-height: calc(100% - 40px);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 12px 16px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  max-width: 340px;
-}
-
-.info h1 {
-  margin: 0 0 6px;
-  font-size: 18px;
-}
-
-.info p {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: #555;
-}
-
-.search-box {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  overflow: visible;
 }
 
-.search-box input {
-  flex: 1;
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 13px;
-  outline: none;
+.panel.collapsed {
+  transform: translateX(-380px);
 }
 
-.search-box input:focus {
-  border-color: #2563eb;
-}
-
-.search-box button {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 8px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.search-box button:hover {
-  background: #1d4ed8;
-}
-
-.status {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #666;
-}
-
-.retry-btn {
-  margin-top: 8px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #f1f5f9;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.retry-btn:hover {
-  background: #e2e8f0;
-}
-
-.secure-hint {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: #b45309;
-  background: #fef3c7;
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-
-.locate-btn {
+/* Toggle arrow button for desktop */
+.toggle-btn {
   position: absolute;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
-  width: 48px;
-  height: 48px;
-  border: none;
+  right: -14px;
+  top: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  font-size: 22px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s, box-shadow 0.2s;
+  z-index: 1001;
+  transition: transform 0.3s ease, background-color 0.2s;
+  padding: 0;
+}
+
+.toggle-btn:hover {
+  background-color: #f8fafc;
+}
+
+.panel.collapsed .toggle-btn {
+  transform: rotate(180deg);
+  right: -38px;
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.toggle-btn .handle-bar {
+  display: none; /* Only visible on mobile bottom sheet */
+}
+
+.toggle-btn .arrow-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.panel-content {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-header h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-brand {
+  font-size: 24px;
+}
+
+.app-header p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Modern Input Styling */
+.search-box {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.search-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s;
+}
+
+.search-btn:hover {
+  background-color: var(--primary-hover);
+}
+
+.search-btn:active {
+  transform: scale(0.97);
+}
+
+/* Status section with dot pulsing animation */
+.status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: pulse 1.8s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.85); opacity: 0.5; }
+  100% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+}
+
+.status-text {
+  font-weight: 500;
+}
+
+.retry-btn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.retry-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.secure-hint {
+  font-size: 11px;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+  line-height: 1.4;
+}
+
+.info-footer {
+  margin-top: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 14px;
+}
+
+.info-footer p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Float Action Buttons container */
+.fab-container {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.locate-btn {
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, box-shadow 0.2s, background-color 0.2s;
+  padding: 0;
 }
 
 .locate-btn:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  background-color: #f8fafc;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
 }
 
 .locate-btn:active {
-  transform: scale(0.95);
+  transform: translateY(0) scale(0.95);
+}
+
+/* Toast Message Design */
+.toast {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  max-width: 90vw;
+  width: max-content;
+}
+
+.toast-success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-error {
+  border-left: 4px solid #ef4444;
+  background: #7f1d1d;
+}
+
+/* Toast animation transitions */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translate(-50%, 30px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -20px);
+}
+
+/* MOBILE RESPONSIVE STYLING (Bottom Sheet mode) */
+@media (max-width: 767px) {
+  .panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 50%;
+    height: auto;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    transform: translateY(0);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  .panel.collapsed {
+    transform: translateY(calc(100% - 44px)); /* Slide down, leaving only the drag handle visible */
+  }
+
+  .panel-content {
+    padding: 16px 20px 24px;
+    gap: 14px;
+  }
+
+  .toggle-btn {
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 44px;
+    background: transparent;
+    border: none;
+    border-radius: 20px 20px 0 0;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .toggle-btn:hover {
+    background: transparent;
+  }
+
+  .toggle-btn .handle-bar {
+    display: block;
+    width: 36px;
+    height: 4px;
+    background-color: #cbd5e1;
+    border-radius: 2px;
+    transition: background-color 0.2s;
+  }
+
+  .toggle-btn:hover .handle-bar {
+    background-color: #94a3b8;
+  }
+
+  .toggle-btn .arrow-icon {
+    display: none; /* Hide desktop arrow on mobile */
+  }
+
+  .panel.collapsed .toggle-btn {
+    transform: none;
+    right: 0;
+    background-color: transparent;
+    color: inherit;
+  }
+
+  .fab-container {
+    bottom: calc(50% + 16px);
+    right: 16px;
+    transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .panel.collapsed ~ .fab-container {
+    bottom: 60px;
+  }
+
+  .app-header h1 {
+    font-size: 18px;
+  }
+
+  .info-footer {
+    display: none; /* Save space on mobile */
+  }
 }
 </style>
 
 <style>
+/* LEAFLET CUSTOMIZATIONS (Global Styles) */
+.leaflet-container {
+  font-family: inherit !important;
+}
+
+/* Custom Zoom control styles */
+.leaflet-right .leaflet-control-zoom {
+  margin-right: 24px !important;
+  margin-bottom: 80px !important; /* Stand above Locate button */
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+}
+
+/* Custom teardrop marker pins */
 .station-marker {
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.station-pin-wrapper {
+  position: relative;
+  width: 40px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
 }
 
 .station-pin {
-  width: 38px;
-  height: 38px;
-  background: #2563eb;
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border: 2.5px solid #ffffff;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.pin-icon {
+  transform: rotate(45deg);
+  display: block;
+}
+
+/* Green gradient for positive fuel counts */
+.station-pin-wrapper.has-fuel .station-pin {
+  background: linear-gradient(135deg, #10b981, #047857);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* Red gradient for confirmed no fuel */
+.station-pin-wrapper.no-fuel .station-pin {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+}
+
+.station-pin-wrapper:hover .station-pin {
+  transform: rotate(-45deg) scale(1.15);
+  z-index: 999;
+}
+
+/* Status-based animations */
+.station-pin-wrapper.has-fuel::before {
+  content: '';
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #10b981;
+  animation: ping-glow 2s infinite ease-out;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.75;
+}
+
+@keyframes ping-glow {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+/* Station counter badge positioning */
 .station-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #fff;
-  border-radius: 10px;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-weight: bold;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  top: -8px;
+  right: -8px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: flex;
+  align-items: center;
   gap: 2px;
+  border: 1px solid #f1f5f9;
+  z-index: 10;
 }
 
 .station-badge .yes {
-  color: #16a34a;
+  color: #10b981;
 }
 
 .station-badge .no {
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .station-badge .sep {
-  color: #888;
+  color: #cbd5e1;
 }
 
-.station-popup {
-  min-width: 240px;
+/* Sleek Popup Box Design */
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  padding: 6px !important;
 }
 
-.station-popup h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
+.leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
 }
 
-.station-popup p {
-  margin: 0 0 10px;
-  color: #666;
-  font-size: 13px;
+.leaflet-popup-content {
+  margin: 12px !important;
+  width: 250px !important;
+  font-family: 'Rubik', sans-serif !important;
 }
 
-.fuel-list {
+.popup-title-bar h3 {
+  margin: 0 0 2px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.popup-brand {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.station-popup .fuel-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 10px;
+  margin: 12px 0 10px 0;
 }
 
-.fuel-row {
+.station-popup .fuel-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 6px 10px;
   background: #f8fafc;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
 }
 
-.fuel-info {
+.station-popup .fuel-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
-.fuel-name {
-  font-weight: 600;
-  font-size: 14px;
+.station-popup .fuel-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1e293b;
 }
 
-.fuel-counts {
-  font-size: 12px;
+.station-popup .fuel-counts {
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
-.fuel-counts .yes {
-  color: #16a34a;
+.station-popup .fuel-counts .yes {
+  color: #059669;
+  font-weight: 500;
 }
 
-.fuel-counts .no {
+.station-popup .fuel-counts .no {
   color: #dc2626;
+  font-weight: 500;
 }
 
-.fuel-counts .sep {
-  color: #888;
-  margin: 0 4px;
+.station-popup .fuel-counts .sep {
+  color: #e2e8f0;
 }
 
-.fuel-buttons {
+.station-popup .fuel-buttons {
   display: flex;
   gap: 6px;
 }
 
-.fuel-buttons button {
-  width: 34px;
-  height: 34px;
+/* Beautiful custom buttons with SVG */
+.station-popup .fuel-buttons button {
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
 }
 
-.fuel-buttons button:hover {
-  opacity: 0.85;
+.station-popup .vote-icon {
+  width: 16px;
+  height: 16px;
 }
 
-.fuel-buttons button:active {
+.station-popup .btn-yes {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.station-popup .btn-yes:hover {
+  background: #bbf7d0;
+  transform: scale(1.08);
+}
+
+.station-popup .btn-yes:active {
   transform: scale(0.95);
 }
 
-.fuel-buttons .btn-yes {
-  background: #dcfce7;
+.station-popup .btn-no {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
-.fuel-buttons .btn-no {
-  background: #fee2e2;
+.station-popup .btn-no:hover {
+  background: #fecaca;
+  transform: scale(1.08);
+}
+
+.station-popup .btn-no:active {
+  transform: scale(0.95);
 }
 
 .station-popup .hint {
   margin: 0;
-  font-size: 11px;
-  color: #888;
+  font-size: 10px;
+  color: #94a3b8;
   text-align: center;
 }
 </style>
